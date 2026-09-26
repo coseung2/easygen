@@ -31,7 +31,11 @@ function JobRow({ job }: { job: Job }) {
   const statusClass = job.status.toLowerCase()
   return <div className="job-row">
     <div className="job-kind">{job.kind === 'music' ? <AudioLines size={16} /> : <Video size={16} />}</div>
-    <div className="job-copy"><strong>{job.prompt.slice(0, 76)}</strong><small>{job.id} · {job.kind ? modeLabels[job.kind] : 'H3'} · {new Date(job.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</small></div>
+    <div className="job-copy">
+      <strong>{job.prompt.slice(0, 76)}</strong>
+      <small>{job.id} · {job.kind ? modeLabels[job.kind] : 'H3'} · {new Date(job.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</small>
+      {job.status === 'FAILED' && job.error ? <small className="bad">{job.error}</small> : null}
+    </div>
     <span className={'status-pill ' + statusClass}>{job.status === 'COMPLETED' ? '완료' : job.status === 'FAILED' ? '실패' : job.status === 'QUEUED' ? '대기' : '실행 중'}</span>
     <span className="job-stage">{stageLabels[job.stage] || job.stage}</span>
     <ChevronRight size={16} className="row-arrow" />

@@ -10,7 +10,10 @@ use crate::accounts::{
 };
 use crate::database::{current_period, init_db, latest_billing_period, read_active_modal_profile};
 use crate::diagnostics::{sanitize_detail, DETAIL_LIMIT};
-use crate::jobs::{apply_worker_event, mark_spawn_failure_row, mark_worker_exit_row};
+use crate::jobs::{
+    apply_worker_event, fail_interrupted_jobs, mark_spawn_failure_row, mark_start_failure_row,
+    mark_worker_exit_row, recent_jobs, PROFILE_UNAVAILABLE_CODE, RESTART_ERROR_CODE,
+};
 use crate::usage::{usage_rows, value_as_f64, write_sync_summary};
 use rusqlite::params;
 use rusqlite::Connection;
@@ -684,6 +687,228 @@ fn a_dead_or_unspawnable_worker_cannot_leave_a_job_running() {
     assert_eq!(row("job_done").0, "COMPLETED");
     // A job that never reached a worker is reported instead of staying QUEUED.
     assert_eq!(row("job_queued").0, "FAILED");
+}
+
+#[test]
+fn a_restart_closes_only_the_jobs_that_could_not_finish() {
+    let conn = fresh_db();
+    for (id, status) in [
+        ("job_queued", "QUEUED"),
+        ("job_running", "RUNNING"),
+        ("job_downloading", "DOWNLOADING"),
+        ("job_done", "COMPLETED"),
+        ("job_cancelled", "CANCELLED"),
+        ("job_failed", "FAILED"),
+    ] {
+        conn.execute(
+            "INSERT INTO jobs (id, modal_profile_id, status, stage, prompt, input_path, created_at) \
+             VALUES (?1, 'modal_01', ?2, 'GENERATING', 'p', '', 'x')",
+            params![id, status],
+        )
+        .unwrap();
+    }
+    // A real failure keeps the reason it already had.
+    conn.execute(
+        "UPDATE jobs SET error_code = 'MODAL_GENERATION_FAILED', error_message = 'boom' \
+         WHERE id = 'job_failed'",
+        [],
+    )
+    .unwrap();
+
+    assert_eq!(fail_interrupted_jobs(&conn).unwrap(), 3);
+    let row = |id: &str| -> (String, Option<String>, Option<String>, Option<String>) {
+        conn.query_row(
+            "SELECT status, error_code, error_message, completed_at FROM jobs WHERE id = ?1",
+            params![id],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+        )
+        .unwrap()
+    };
+    for id in ["job_queued", "job_running", "job_downloading"] {
+        let (status, code, message, completed) = row(id);
+        assert_eq!(status, "FAILED", "{id}");
+        assert_eq!(code.as_deref(), Some(RESTART_ERROR_CODE), "{id}");
+        assert!(message.unwrap().contains("다시 시작"), "{id}");
+        assert!(completed.is_some(), "{id}");
+    }
+    // Finished history is never rewritten, not even its own error details.
+    assert_eq!(row("job_done").0, "COMPLETED");
+    assert!(row("job_done").3.is_none());
+    assert_eq!(row("job_cancelled").0, "CANCELLED");
+    let (status, code, message, _) = row("job_failed");
+    assert_eq!(status, "FAILED");
+    assert_eq!(code.as_deref(), Some("MODAL_GENERATION_FAILED"));
+    assert_eq!(message.as_deref(), Some("boom"));
+
+    // A second startup has nothing left to close.
+    assert_eq!(fail_interrupted_jobs(&conn).unwrap(), 0);
+}
+
+#[test]
+fn late_events_cannot_resurrect_a_finished_job() {
+    let conn = fresh_db();
+    for (id, status) in [
+        ("job_done", "COMPLETED"),
+        ("job_cancelled", "CANCELLED"),
+        ("job_failed", "FAILED"),
+    ] {
+        conn.execute(
+            "INSERT INTO jobs (id, modal_profile_id, status, stage, prompt, input_path, created_at) \
+             VALUES (?1, 'modal_01', ?2, 'GENERATING', 'p', '', 'x')",
+            params![id, status],
+        )
+        .unwrap();
+    }
+    conn.execute(
+        "UPDATE jobs SET stage = 'COMPLETED' WHERE id = 'job_done'",
+        [],
+    )
+    .unwrap();
+
+    for (id, stage) in [
+        ("job_done", "GENERATING"),
+        ("job_cancelled", "RESULT_DOWNLOADING"),
+        ("job_failed", "RESULT_DOWNLOADING"),
+    ] {
+        apply_worker_event(
+            &conn,
+            &json!({"type": "stage", "job_id": id, "stage": stage, "progress": 42}),
+        )
+        .unwrap();
+        apply_worker_event(
+            &conn,
+            &json!({"type": "remote_attached", "job_id": id, "function_call_id": "modal-late"}),
+        )
+        .unwrap();
+    }
+    // A replay of a terminal event is ignored as well.
+    apply_worker_event(&conn, &json!({"type": "completed", "job_id": "job_failed"})).unwrap();
+    apply_worker_event(
+        &conn,
+        &json!({"type": "failed", "job_id": "job_done", "code": "LATE", "message": "late"}),
+    )
+    .unwrap();
+
+    let row = |id: &str| -> (String, String, Option<f64>) {
+        conn.query_row(
+            "SELECT status, stage, progress FROM jobs WHERE id = ?1",
+            params![id],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )
+        .unwrap()
+    };
+    assert_eq!(row("job_done"), (String::from("COMPLETED"), String::from("COMPLETED"), None));
+    assert_eq!(
+        row("job_cancelled"),
+        (String::from("CANCELLED"), String::from("GENERATING"), None)
+    );
+    assert_eq!(
+        row("job_failed"),
+        (String::from("FAILED"), String::from("GENERATING"), None)
+    );
+    let errors: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM jobs WHERE error_code IS NOT NULL",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(errors, 0);
+    // Nothing was written, so the ignored events leave no audit rows either.
+    let events: i64 = conn
+        .query_row("SELECT COUNT(*) FROM job_events", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(events, 0);
+
+    // A job still in flight keeps updating normally.
+    conn.execute(
+        "INSERT INTO jobs (id, modal_profile_id, status, stage, prompt, input_path, created_at) \
+         VALUES ('job_live', 'modal_01', 'QUEUED', 'JOB_CREATED', 'p', '', 'x')",
+        [],
+    )
+    .unwrap();
+    apply_worker_event(
+        &conn,
+        &json!({"type": "stage", "job_id": "job_live", "stage": "GENERATING"}),
+    )
+    .unwrap();
+    assert_eq!(row("job_live").0, "RUNNING");
+}
+
+#[test]
+fn a_job_that_loses_its_account_before_start_is_closed_instead_of_staying_queued() {
+    let conn = fresh_db();
+    conn.execute(
+        "INSERT INTO jobs (id, modal_profile_id, status, stage, prompt, input_path, created_at) \
+         VALUES ('job_1', 'modal_01', 'QUEUED', 'JOB_CREATED', 'p', '', 'x')",
+        [],
+    )
+    .unwrap();
+    // The narrow race: the account is stopped after create_job, before start_job.
+    set_profile_enabled(&conn, "modal_01", false).unwrap();
+    let error = resolve_profile(&conn, &Some(String::from("modal_01"))).unwrap_err();
+    mark_start_failure_row(&conn, "job_1", &error);
+
+    let (status, code, message, completed): (String, Option<String>, Option<String>, Option<String>) =
+        conn.query_row(
+            "SELECT status, error_code, error_message, completed_at FROM jobs WHERE id = 'job_1'",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+        )
+        .unwrap();
+    assert_eq!(status, "FAILED");
+    assert_eq!(code.as_deref(), Some(PROFILE_UNAVAILABLE_CODE));
+    assert!(message.unwrap().contains("중지된"));
+    assert!(completed.is_some());
+
+    // A finished row is not rewritten by the same guard.
+    conn.execute(
+        "UPDATE jobs SET status = 'COMPLETED', stage = 'COMPLETED' WHERE id = 'job_1'",
+        [],
+    )
+    .unwrap();
+    mark_start_failure_row(&conn, "job_1", "ignored");
+    let status: String = conn
+        .query_row("SELECT status FROM jobs WHERE id = 'job_1'", [], |row| {
+            row.get(0)
+        })
+        .unwrap();
+    assert_eq!(status, "COMPLETED");
+}
+
+#[test]
+fn recent_jobs_returns_the_newest_first_for_queue_hydration() {
+    let conn = fresh_db();
+    conn.execute(
+        "INSERT INTO jobs (id, modal_profile_id, status, stage, prompt, input_path, created_at, completed_at, error_code, error_message) \
+         VALUES ('job_old', 'modal_01', 'COMPLETED', 'COMPLETED', 'old', 'C:/a.png', '2026-09-01T00:00:00Z', '2026-09-01T00:10:00Z', NULL, NULL)",
+        [],
+    )
+    .unwrap();
+    conn.execute(
+        "INSERT INTO jobs (id, modal_profile_id, status, stage, prompt, input_path, created_at, started_at) \
+         VALUES ('job_new', 'modal_01', 'FAILED', 'GENERATING', 'new', '', '2026-09-02T00:00:00Z', '2026-09-02T00:01:00Z')",
+        [],
+    )
+    .unwrap();
+    conn.execute(
+        "UPDATE jobs SET error_code = 'INTERRUPTED_BY_RESTART', error_message = '앱이 다시 시작되어 중단됨' \
+         WHERE id = 'job_new'",
+        [],
+    )
+    .unwrap();
+
+    let rows = recent_jobs(&conn, 50).unwrap();
+    assert_eq!(rows.len(), 2);
+    assert_eq!(rows[0].id, "job_new");
+    assert_eq!(rows[0].status, "FAILED");
+    assert_eq!(rows[0].error_code.as_deref(), Some(RESTART_ERROR_CODE));
+    assert_eq!(rows[0].started_at.as_deref(), Some("2026-09-02T00:01:00Z"));
+    assert_eq!(rows[1].id, "job_old");
+    assert_eq!(rows[1].completed_at.as_deref(), Some("2026-09-01T00:10:00Z"));
+
+    // The limit is honored so the queue cannot pull an unbounded history.
+    assert_eq!(recent_jobs(&conn, 1).unwrap().len(), 1);
 }
 
 #[test]

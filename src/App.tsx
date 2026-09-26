@@ -8,6 +8,7 @@ import { JobsPage } from './pages/JobsPage'
 import { ResultsPage } from './pages/ResultsPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { call, isTauri } from './lib/tauri'
+import { listRecentJobs, storedJobToJob } from './lib/jobs'
 import type { Job, JobStage, JobKind } from './types'
 import { navItems, stageLabels, type Draft, type Page, type WorkerEvent } from './app-config'
 
@@ -15,6 +16,25 @@ export function App() {
   const [page, setPage] = React.useState<Page>('Generate')
   const [jobs, setJobs] = React.useState<Job[]>([])
   const [notice, setNotice] = React.useState('')
+
+  // The queue screen is otherwise in-memory only, so a restart would hide the
+  // jobs the database already knows about (including the ones closed as
+  // interrupted). Rows already in memory win, since they are the live ones.
+  React.useEffect(() => {
+    if (!isTauri) return
+    let cancelled = false
+    void listRecentJobs(100)
+      .then((rows) => {
+        if (cancelled || rows.length === 0) return
+        setJobs((current) => {
+          const known = new Set(current.map((job) => job.id))
+          const restored = rows.filter((row) => !known.has(row.id)).map(storedJobToJob)
+          return restored.length ? [...current, ...restored] : current
+        })
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [])
 
   React.useEffect(() => {
     if (!isTauri) return

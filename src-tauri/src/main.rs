@@ -35,6 +35,8 @@ fn main() {
             std::fs::create_dir_all(&path)?;
             let conn = Connection::open(path.join("app.db"))?;
             init_db(&conn)?;
+            // A job left mid-flight by the previous process can never finish.
+            jobs::fail_interrupted_jobs(&conn)?;
             app.manage(AppState(Mutex::new(conn)));
             Ok(())
         })
@@ -43,6 +45,7 @@ fn main() {
             jobs::create_job,
             jobs::start_job,
             jobs::start_music,
+            jobs::list_recent_jobs,
             accounts::list_modal_profiles,
             accounts::save_modal_profile,
             accounts::set_modal_profile_enabled,

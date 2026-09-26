@@ -116,6 +116,7 @@ h1 { margin: 0; color: #f6f8fc; font-size: 29px; letter-spacing: -.05em; }
 .job-copy strong, .job-copy small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .job-copy strong { color: #dce5ef; font-size: 11px; font-weight: 600; }
 .job-copy small { margin-top: 5px; color: #6f7d91; font: 9px 'DM Mono'; }
+.job-copy small.bad { color: #ff9da0; }
 .status-pill { min-width: 54px; padding: 6px 8px; border-radius: 99px; text-align: center; font: 9px 'DM Mono'; }
 .status-pill.completed { color: #a7ef75; background: #25382a; }
 .status-pill.failed { color: #ff9da0; background: #42282d; }

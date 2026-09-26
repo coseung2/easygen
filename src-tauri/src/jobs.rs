@@ -4,12 +4,22 @@ use crate::database::{now_rfc3339, AppState};
 use crate::diagnostics::{sanitize_detail, DETAIL_LIMIT};
 use crate::paths::{default_clips_root, default_music_root, repo_root};
 use rusqlite::{params, Connection};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::io::{BufRead, BufReader, Write};
 use std::process::{Command, Stdio};
 use std::thread;
 use tauri::{Emitter, Manager, State};
+
+/// error_code for jobs a previous process left in a non-terminal state.
+pub(crate) const RESTART_ERROR_CODE: &str = "INTERRUPTED_BY_RESTART";
+/// error_code for jobs whose account became unusable between `create_job` and
+/// the matching start command.
+pub(crate) const PROFILE_UNAVAILABLE_CODE: &str = "PROFILE_UNAVAILABLE";
+
+/// SQL list of the states a job never leaves. Kept in one place so every writer
+/// refuses to rewrite finished history.
+const TERMINAL_STATUSES: &str = "('COMPLETED', 'CANCELLED', 'FAILED')";
 
 #[derive(Deserialize, Clone)]
 pub(crate) struct NewJob {
@@ -63,6 +73,24 @@ fn job_prompt(job: &NewJob) -> String {
             .unwrap_or_else(|| job.prompt.clone()),
         _ => job.prompt.clone(),
     }
+}
+
+/// Startup recovery. A QUEUED/RUNNING/DOWNLOADING row belongs to a process that
+/// no longer exists, so it can never finish; confirming it as FAILED keeps the
+/// queue and the usage table honest instead of showing a job that runs forever.
+/// COMPLETED/CANCELLED/FAILED rows are history and are never touched.
+pub(crate) fn fail_interrupted_jobs(conn: &Connection) -> rusqlite::Result<usize> {
+    conn.execute(
+        &format!(
+            "UPDATE jobs SET status = 'FAILED', error_code = ?1, error_message = ?2, \
+             completed_at = COALESCE(completed_at, ?3) WHERE status NOT IN {TERMINAL_STATUSES}"
+        ),
+        params![
+            RESTART_ERROR_CODE,
+            "앱이 다시 시작되어 이전 실행에서 중단된 작업입니다. 다시 실행해 주세요.",
+            now_rfc3339()
+        ],
+    )
 }
 
 /// One worker process per job, so the selected Modal CLI profile can be passed
@@ -186,6 +214,51 @@ pub(crate) fn mark_spawn_failure_row(conn: &Connection, job_id: &str, detail: &s
     );
 }
 
+/// Resolves the account for a start command. `create_job` already inserted the
+/// row as QUEUED, so when the account turns unusable in between (stopped,
+/// archived, removed) the job is confirmed as FAILED instead of staying QUEUED
+/// forever with no worker behind it.
+fn resolve_for_start(
+    state: &State<AppState>,
+    profile_id: &Option<String>,
+    job_id: &str,
+) -> Result<(String, Option<String>), String> {
+    let resolved = {
+        let conn = state.0.lock().map_err(|error| error.to_string())?;
+        resolve_profile(&conn, profile_id)
+    };
+    match resolved {
+        Ok(value) => Ok(value),
+        Err(error) => {
+            mark_start_failure(state, job_id, &error);
+            Err(error)
+        }
+    }
+}
+
+fn mark_start_failure(state: &State<AppState>, job_id: &str, detail: &str) {
+    let Ok(conn) = state.0.lock() else {
+        return;
+    };
+    mark_start_failure_row(&conn, job_id, detail);
+}
+
+pub(crate) fn mark_start_failure_row(conn: &Connection, job_id: &str, detail: &str) {
+    let _ = conn.execute(
+        &format!(
+            "UPDATE jobs SET status = 'FAILED', error_code = ?2, error_message = ?3, \
+             completed_at = COALESCE(completed_at, ?4) \
+             WHERE id = ?1 AND status NOT IN {TERMINAL_STATUSES}"
+        ),
+        params![
+            job_id,
+            PROFILE_UNAVAILABLE_CODE,
+            sanitize_detail(detail, DETAIL_LIMIT),
+            now_rfc3339()
+        ],
+    );
+}
+
 fn persist_worker_event(app: &tauri::AppHandle, event: &Value) {
     let Some(app_state) = app.try_state::<AppState>() else {
         return;
@@ -261,17 +334,22 @@ pub(crate) fn apply_worker_event(conn: &Connection, event: &Value) -> Result<(),
 
     let changed = conn
         .execute(
-            "UPDATE jobs SET \
-               status = COALESCE(?2, status), \
-               stage = COALESCE(?3, stage), \
-               progress = COALESCE(?4, progress), \
-               started_at = CASE WHEN ?5 = 1 THEN COALESCE(started_at, ?6) ELSE started_at END, \
-               completed_at = CASE WHEN ?7 = 1 THEN COALESCE(completed_at, ?6) ELSE completed_at END, \
-               output_path = COALESCE(?8, output_path), \
-               function_call_id = COALESCE(?9, function_call_id), \
-               error_code = CASE WHEN ?10 = 1 THEN ?11 ELSE error_code END, \
-               error_message = CASE WHEN ?10 = 1 THEN ?12 ELSE error_message END \
-             WHERE id = ?1",
+            // Terminal rows are frozen: a late `stage`/`remote_attached`/`progress`
+            // event from a recycled worker must not pull a finished job back to
+            // RUNNING/DOWNLOADING.
+            &format!(
+                "UPDATE jobs SET \
+                 status = COALESCE(?2, status), \
+                 stage = COALESCE(?3, stage), \
+                 progress = COALESCE(?4, progress), \
+                 started_at = CASE WHEN ?5 = 1 THEN COALESCE(started_at, ?6) ELSE started_at END, \
+                 completed_at = CASE WHEN ?7 = 1 THEN COALESCE(completed_at, ?6) ELSE completed_at END, \
+                 output_path = COALESCE(?8, output_path), \
+                 function_call_id = COALESCE(?9, function_call_id), \
+                 error_code = CASE WHEN ?10 = 1 THEN ?11 ELSE error_code END, \
+                 error_message = CASE WHEN ?10 = 1 THEN ?12 ELSE error_message END \
+                 WHERE id = ?1 AND status NOT IN {TERMINAL_STATUSES}"
+            ),
             params![
                 job_id,
                 status,
@@ -315,12 +393,9 @@ pub(crate) fn start_job(
     job: NewJob,
 ) -> Result<(), String> {
     let kind = job.kind.clone().unwrap_or_else(|| "t2v".to_string());
-    let (profile_id, modal_profile) = {
-        let conn = state.0.lock().map_err(|error| error.to_string())?;
-        resolve_profile(&conn, &job.profile_id)?
-    };
-    let modal_profile_env = modal_profile.clone();
     let job_id = job.id.clone();
+    let (profile_id, modal_profile) = resolve_for_start(&state, &job.profile_id, &job_id)?;
+    let modal_profile_env = modal_profile.clone();
     if let Err(error) = spawn_worker(
         app,
         json!({
@@ -344,20 +419,93 @@ pub(crate) fn start_job(
     Ok(())
 }
 
+/// One stored job row, enough for the queue screen to rebuild a list that
+/// survived a restart. Reads use column order rather than a second mapping.
+#[derive(Serialize)]
+pub(crate) struct RecentJob {
+    pub(crate) id: String,
+    pub(crate) profile_id: Option<String>,
+    pub(crate) function_call_id: Option<String>,
+    pub(crate) kind: Option<String>,
+    pub(crate) status: String,
+    pub(crate) stage: String,
+    pub(crate) prompt: String,
+    pub(crate) input_path: String,
+    pub(crate) output_path: Option<String>,
+    pub(crate) thumbnail_path: Option<String>,
+    pub(crate) duration: Option<i64>,
+    pub(crate) resolution: Option<String>,
+    pub(crate) seed: Option<i64>,
+    pub(crate) progress: Option<f64>,
+    pub(crate) error_code: Option<String>,
+    pub(crate) error_message: Option<String>,
+    pub(crate) created_at: String,
+    pub(crate) started_at: Option<String>,
+    pub(crate) completed_at: Option<String>,
+}
+
+pub(crate) fn recent_jobs(conn: &Connection, limit: i64) -> Result<Vec<RecentJob>, String> {
+    let mut statement = conn
+        .prepare(
+            "SELECT id, modal_profile_id, function_call_id, kind, status, stage, prompt, \
+             input_path, output_path, thumbnail_path, duration, resolution, seed, progress, \
+             error_code, error_message, created_at, started_at, completed_at \
+             FROM jobs \
+             ORDER BY COALESCE(completed_at, started_at, created_at) DESC, created_at DESC \
+             LIMIT ?1",
+        )
+        .map_err(|error| error.to_string())?;
+    let rows = statement
+        .query_map(params![limit], |row| {
+            Ok(RecentJob {
+                id: row.get(0)?,
+                profile_id: row.get(1)?,
+                function_call_id: row.get(2)?,
+                kind: row.get(3)?,
+                status: row.get(4)?,
+                stage: row.get(5)?,
+                prompt: row.get(6)?,
+                input_path: row.get(7)?,
+                output_path: row.get(8)?,
+                thumbnail_path: row.get(9)?,
+                duration: row.get(10)?,
+                resolution: row.get(11)?,
+                seed: row.get(12)?,
+                progress: row.get(13)?,
+                error_code: row.get(14)?,
+                error_message: row.get(15)?,
+                created_at: row.get(16)?,
+                started_at: row.get(17)?,
+                completed_at: row.get(18)?,
+            })
+        })
+        .map_err(|error| error.to_string())?
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .map_err(|error| error.to_string())?;
+    Ok(rows)
+}
+
+#[tauri::command]
+pub(crate) fn list_recent_jobs(
+    state: State<AppState>,
+    job_limit: Option<i64>,
+) -> Result<Vec<RecentJob>, String> {
+    let limit = job_limit.unwrap_or(100).clamp(1, 500);
+    let conn = state.0.lock().map_err(|error| error.to_string())?;
+    recent_jobs(&conn, limit)
+}
+
 #[tauri::command]
 pub(crate) fn start_music(
     app: tauri::AppHandle,
     state: State<AppState>,
     job: NewJob,
 ) -> Result<(), String> {
-    let (profile_id, modal_profile) = {
-        let conn = state.0.lock().map_err(|error| error.to_string())?;
-        resolve_profile(&conn, &job.profile_id)?
-    };
+    let job_id = job.id.clone();
+    let (profile_id, modal_profile) = resolve_for_start(&state, &job.profile_id, &job_id)?;
     let style = job_prompt(&job);
     let lyrics = job.lyrics.clone().unwrap_or_default();
     let modal_profile_env = modal_profile.clone();
-    let job_id = job.id.clone();
     if let Err(error) = spawn_worker(
         app,
         json!({
