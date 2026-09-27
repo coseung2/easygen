@@ -196,10 +196,7 @@ export function TimelinePanel({
               </button>
             </>
           ) : (
-            <button className="primary-action small" disabled={busy} onClick={() => void run()}>
-              <Play size={12} fill="currentColor" />
-              실행
-            </button>
+            <p className="dim">실행은 캔버스 노드의 버튼만 사용합니다. 여기서는 시간과 결과를 확인합니다.</p>
           )}
         </div>
       </header>

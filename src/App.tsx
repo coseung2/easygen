@@ -17,6 +17,11 @@ import { applyWorkerEvent, reconcileJobLists } from './ux/stageOne'
 
 export function App() {
   const [page, setPage] = React.useState<Page>('Studio')
+  React.useEffect(() => {
+    const openUsage = () => { if (window.location.hash === '#usage') setPage('Usage') }
+    window.addEventListener('hashchange', openUsage)
+    return () => window.removeEventListener('hashchange', openUsage)
+  }, [])
   const [jobs, setJobs] = React.useState<Job[]>([])
   const [notice, setNotice] = React.useState('')
 

@@ -194,6 +194,7 @@ export function StudioPage() {
 
 function StudioWorkspace({ onExit, onExitError }: { onExit: () => Promise<void>; onExitError: (message: string) => void }) {
   const reactFlow = useReactFlow()
+  const projectId = useStudioStore((state) => state.projectId)
   const projectName = useStudioStore((state) => state.projectName)
   const doc = useStudioStore((state) => state.doc)
   const dirty = useStudioStore((state) => state.dirty)
@@ -205,13 +206,51 @@ function StudioWorkspace({ onExit, onExitError }: { onExit: () => Promise<void>;
   const notice = useStudioStore((state) => state.notice)
   const setNotice = React.useCallback((message: string) => useStudioStore.getState().setNotice(message), [])
   const [dropActive, setDropActive] = React.useState(false)
-  const [leftOpen, setLeftOpen] = React.useState(true)
-  const [rightOpen, setRightOpen] = React.useState(true)
-  const [timelineOpen, setTimelineOpen] = React.useState(true)
+  const panelKey = `modal-gui.studio.panels.${projectId || 'new'}`
+  const [panels, setPanels] = React.useState({ left: true, right: false, timeline: false, storyboard: false })
   const fileInputRef = React.useRef<HTMLInputElement | null>(null)
   const canvasRef = React.useRef<HTMLDivElement | null>(null)
   const savingRef = React.useRef(false)
   const pendingRef = React.useRef(false)
+  React.useEffect(() => {
+    const raw = localStorage.getItem(panelKey)
+    if (!raw) return
+    try {
+      const parsed = JSON.parse(raw) as typeof panels
+      if (window.innerWidth < 1180) {
+        const opened = (['left', 'right', 'timeline', 'storyboard'] as const).filter((key) => parsed[key])
+        for (const key of opened.slice(1)) parsed[key] = false
+      }
+      setPanels(parsed)
+    } catch { localStorage.removeItem(panelKey) }
+  }, [panelKey])
+  React.useEffect(() => {
+    const onResize = () => {
+      if (window.innerWidth >= 1180) return
+      setPanels((current) => {
+        const opened = (['left', 'right', 'timeline', 'storyboard'] as const).filter((key) => current[key])
+        if (opened.length <= 1) return current
+        const next = { ...current }
+        for (const key of opened.slice(1)) next[key] = false
+        localStorage.setItem(panelKey, JSON.stringify(next))
+        return next
+      })
+    }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [panelKey])
+  const updatePanels = (patch: Partial<typeof panels>) => {
+    setPanels((current) => {
+      const next = { ...current, ...patch }
+      const narrow = window.innerWidth < 1180
+      if (narrow) {
+        const opened = (['left', 'right', 'timeline', 'storyboard'] as const).find((key) => patch[key] && next[key])
+        if (opened) for (const key of ['left', 'right', 'timeline', 'storyboard'] as const) if (key !== opened) next[key] = false
+      }
+      localStorage.setItem(panelKey, JSON.stringify(next))
+      return next
+    })
+  }
   // 연속 추가할 때 노드가 겹치지 않도록 화면 중앙 기준으로 배치 순서를 센다.
   const placementRef = React.useRef(0)
 
@@ -466,23 +505,23 @@ function StudioWorkspace({ onExit, onExitError }: { onExit: () => Promise<void>;
         <span className={`save-chip ${saveState}`}>{saveChip}</span>
         <div className="studio-topbar-right">
           <button
-            className={leftOpen ? 'icon-button active' : 'icon-button'}
-            title={leftOpen ? '왼쪽 패널 접기' : '왼쪽 패널 펼치기'}
-            onClick={() => setLeftOpen((value) => !value)}
+            className={panels.left ? 'icon-button active' : 'icon-button'}
+            title={panels.left ? '왼쪽 패널 접기' : '왼쪽 패널 펼치기'}
+            onClick={() => updatePanels({ left: !panels.left })}
           >
             <PanelLeft size={15} />
           </button>
           <button
-            className={rightOpen ? 'icon-button active' : 'icon-button'}
-            title={rightOpen ? '오른쪽 패널 접기' : '오른쪽 패널 펼치기'}
-            onClick={() => setRightOpen((value) => !value)}
+            className={panels.right ? 'icon-button active' : 'icon-button'}
+            title={panels.right ? '오른쪽 패널 접기' : '오른쪽 패널 펼치기'}
+            onClick={() => updatePanels({ right: !panels.right })}
           >
             <PanelRight size={15} />
           </button>
           <button
-            className={timelineOpen ? 'icon-button active' : 'icon-button'}
-            title={timelineOpen ? '타임라인 접기' : '타임라인 펼치기'}
-            onClick={() => setTimelineOpen((value) => !value)}
+            className={panels.storyboard ? 'icon-button active' : 'icon-button'}
+            title={panels.storyboard ? '스토리보드 접기' : '스토리보드 펼치기'}
+            onClick={() => updatePanels({ storyboard: !panels.storyboard })}
           >
             <Timer size={15} />
           </button>
@@ -504,7 +543,7 @@ function StudioWorkspace({ onExit, onExitError }: { onExit: () => Promise<void>;
       </header>
 
       <div className="studio-body">
-        {leftOpen && <LeftPanel onAddNode={addNodeAtCenter} onImportAssets={() => void handleImport()} />}
+        {panels.left && <LeftPanel onAddNode={addNodeAtCenter} onImportAssets={() => void handleImport()} />}
 
         <div
           className="studio-canvas"
@@ -528,8 +567,10 @@ function StudioWorkspace({ onExit, onExitError }: { onExit: () => Promise<void>;
           <StudioCanvas onNotice={setNotice} />
           {doc.nodes.length === 0 && (
             <div className="canvas-empty">
-              <strong>빈 캔버스</strong>
-              <p>왼쪽 패널에서 노드를 추가하거나, 이미지·영상 파일을 끌어다 놓아 소재를 등록하세요.</p>
+              <strong>첫 제작 단계를 추가하세요</strong>
+              <button className="primary-action" onClick={() => addNodeAtCenter('brief')}>첫 노드 추가</button>
+              <button className="secondary-action" onClick={() => void handleImport()}>소재 가져오기</button>
+              <button className="secondary-action" onClick={() => useStudioStore.getState().addShot()}>샷 추가</button>
             </div>
           )}
           {dropActive && <div className="drop-overlay">파일을 놓으면 프로젝트 소재로 등록됩니다</div>}
@@ -541,7 +582,7 @@ function StudioWorkspace({ onExit, onExitError }: { onExit: () => Promise<void>;
           )}
         </div>
 
-        {rightOpen && (
+        {panels.right && (
           <aside className="studio-right">
             <Inspector
               onImportAssets={() => void handleImport()}
@@ -553,14 +594,14 @@ function StudioWorkspace({ onExit, onExitError }: { onExit: () => Promise<void>;
         )}
       </div>
 
-      {timelineOpen && (
+      {panels.timeline && (
         <TimelinePanel
           onReveal={(path) => { void revealInExplorer(path).catch(() => setNotice('폴더를 열 수 없습니다: ' + path)) }}
           onNotice={setNotice}
         />
       )}
 
-      <StoryboardBar onExpandShot={expandShot} />
+      {panels.storyboard && <StoryboardBar onExpandShot={expandShot} />}
 
       <input
         ref={fileInputRef}

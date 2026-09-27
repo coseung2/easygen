@@ -224,6 +224,8 @@ function NodeInspector({ id, onReveal, onNotice }: { id: string; onReveal: (path
   const runs = useStudioStore((state) => state.runs)
   const updateNode = useStudioStore((state) => state.updateNode)
   const setNodeConfig = useStudioStore((state) => state.setNodeConfig)
+  const updateShot = useStudioStore((state) => state.updateShot)
+  const shots = useStudioStore((state) => state.doc.shots)
   const removeNodes = useStudioStore((state) => state.removeNodes)
   const duplicateNode = useStudioStore((state) => state.duplicateNode)
   const removeEdge = useStudioStore((state) => state.removeEdge)
@@ -333,7 +335,10 @@ function NodeInspector({ id, onReveal, onNotice }: { id: string; onReveal: (path
               <button
                 key={candidate.id}
                 className={selectedAsset?.id === candidate.id ? 'candidate-card active' : 'candidate-card'}
-                onClick={() => setNodeConfig(node.id, 'selectedAssetId', candidate.id)}
+                onClick={() => {
+                  setNodeConfig(node.id, 'selectedAssetId', candidate.id)
+                  for (const shot of shots.filter((item) => item.nodeIds.includes(node.id))) updateShot(shot.id, { selectedAssetId: candidate.id })
+                }}
                 title={candidate.name}
               >
                 <span className="candidate-thumb">
@@ -444,7 +449,7 @@ function NodeInspector({ id, onReveal, onNotice }: { id: string; onReveal: (path
             {spec.executionStage === null
               ? '이 노드는 실행되지 않습니다.'
               : isRunnable(node.kind)
-                ? '아직 실행 기록이 없습니다. 노드 카드나 아래 버튼에서 실행하세요.'
+                ? '아직 실행 기록이 없습니다. 노드 카드의 실행 버튼만 사용하세요.'
                 : `실행 연결은 ${spec.executionStage}단계에서 추가됩니다.`}
           </p>
         )}
@@ -471,18 +476,6 @@ function NodeInspector({ id, onReveal, onNotice }: { id: string; onReveal: (path
         </div>
         {isRunnable(node.kind) && (
           <div className="run-actions">
-            <button
-              className="secondary-action small"
-              disabled={Boolean(activeRun)}
-              onClick={() => {
-                void startStudioRun(node.id).then((result) => {
-                  if (!result.ok) onNotice(result.reason ?? '실행을 시작하지 못했습니다.')
-                  else if (result.reason) onNotice(result.reason)
-                })
-              }}
-            >
-              실행
-            </button>
             {activeRun && (
               <button
                 className="row-action danger"
@@ -490,9 +483,15 @@ function NodeInspector({ id, onReveal, onNotice }: { id: string; onReveal: (path
                   void cancelStudioRun(activeRun.id).then((result) => onNotice(result.reason ?? '중단 요청을 보냈습니다.'))
                 }}
               >
-                중단 요청
+                중단
               </button>
             )}
+            {!activeRun && <p className="dim">{node.status === 'stale' ? '입력이 바뀌었습니다. 노드의 다시 실행을 사용하거나 이전 결과를 확인하세요.' : node.status === 'failed' ? '실패 원인을 확인한 뒤 노드에서 다시 실행하세요.' : '실행은 노드 카드의 버튼 하나만 사용합니다.'}</p>}
+            {runs.some((run) => run.nodeId === node.id && run.status === 'prepared' && (run.outputPath || run.remotePath)) && <button className="secondary-action small" onClick={() => {
+              const prepared = runs.find((run) => run.nodeId === node.id && run.status === 'prepared' && (run.outputPath || run.remotePath))
+              if (prepared) onReveal(prepared.outputPath || prepared.remotePath || '')
+            }}>준비한 프로젝트 열기</button>}
+            {activeRun?.status === 'cancel_requested' && <p className="dim">중단 확인을 기다리는 중입니다. 확인 전에는 다시 실행할 수 없습니다.</p>}
           </div>
         )}
       </section>
@@ -701,7 +700,11 @@ function ShotInspector({ id, onExpandShot }: { id: string; onExpandShot: (shotId
 
       <section className="inspector-section">
         <h3 className="inspector-title">선택 소재</h3>
-        <select value={shot.selectedAssetId ?? ''} onChange={(event) => updateShot(shot.id, { selectedAssetId: event.target.value || null })}>
+        <select value={shot.selectedAssetId ?? ''} onChange={(event) => {
+          const assetId = event.target.value || null
+          updateShot(shot.id, { selectedAssetId: assetId })
+          for (const linked of shotNodes) if (assetId) useStudioStore.getState().setNodeConfig(linked.id, 'selectedAssetId', assetId)
+        }}>
           <option value="">선택 없음</option>
           {assets.map((asset) => (
             <option key={asset.id} value={asset.id}>{asset.name}</option>
@@ -923,7 +926,7 @@ function ProjectInspector({ onImportAssets, onNotice }: { onImportAssets: () => 
 
       <section className="inspector-section">
         <h3 className="inspector-title">비용 귀속</h3>
-        {!usage && <p className="dim">실행별 비용을 읽는 중입니다. 기록이 없으면 0이 아니라 미확인으로 표시됩니다.</p>}
+        {usage?.runs.some((run) => run.amountKind === 'pending') && <button className="secondary-action small" onClick={() => { window.location.hash = 'usage'; onNotice('사용량 화면에서 전체 동기화를 실행해 반영 대기 비용을 확인하세요.') }}>사용량에서 비용 동기화</button>}
         {usage && (
           <>
             <dl className="meta-list">
