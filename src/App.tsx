@@ -1,7 +1,9 @@
 import React from 'react'
-import { listen } from '@tauri-apps/api/event'
+import { listenSafely } from './lib/listen'
 import { CheckCircle2, Plus, X, Zap } from 'lucide-react'
 import { EditPage } from './EditPage'
+import { ConnectionsPage } from './pages/ConnectionsPage'
+import { StudioPage } from './studio/StudioPage'
 import { UsagePage } from './UsagePage'
 import { GeneratePage } from './pages/GeneratePage'
 import { JobsPage } from './pages/JobsPage'
@@ -13,7 +15,7 @@ import type { Job, JobStage, JobKind } from './types'
 import { navItems, stageLabels, type Draft, type Page, type WorkerEvent } from './app-config'
 
 export function App() {
-  const [page, setPage] = React.useState<Page>('Generate')
+  const [page, setPage] = React.useState<Page>('Studio')
   const [jobs, setJobs] = React.useState<Job[]>([])
   const [notice, setNotice] = React.useState('')
 
@@ -38,9 +40,7 @@ export function App() {
 
   React.useEffect(() => {
     if (!isTauri) return
-    let stop = () => {}
-    void listen<WorkerEvent>('worker-event', (event) => {
-      const message = event.payload
+    return listenSafely<WorkerEvent>('worker-event', (message) => {
       if (!message.job_id) return
       setJobs((current) => current.map((job) => {
         if (job.id !== message.job_id) return job
@@ -79,10 +79,7 @@ export function App() {
           logs: message.stage ? [...nextLogs, stageLabels[message.stage] || message.stage] : nextLogs,
         }
       }))
-    }).then((unlisten) => {
-      stop = unlisten
     })
-    return () => stop()
   }, [])
 
   const submit = async (draft: Draft) => {
@@ -167,27 +164,34 @@ export function App() {
         </div>
       </aside>
 
-      <main className="workspace">
-        <header className="topbar">
-          <div>
-            <div className="eyebrow">WORKSPACE / {page.toUpperCase()}</div>
-            <h1>{page === 'Generate' ? '새 미디어 만들기' : page === 'Jobs' ? '작업 큐' : page === 'Edit' ? '편집 · 모션그래픽' : page === 'Results' ? '결과물' : page === 'Usage' ? '사용량 리포트' : '설정'}</h1>
-          </div>
-          <div className="topbar-actions">
-            <span className="system-pill"><span className="online-dot" /> LOCAL CORE</span>
-            <button className="icon-button" title="새 작업" aria-label="새 작업" onClick={() => setPage('Generate')}><Plus size={18} /></button>
-          </div>
-        </header>
+      {page === 'Studio' ? (
+        <main className="workspace studio-mode">
+          <StudioPage />
+        </main>
+      ) : (
+        <main className="workspace">
+          <header className="topbar">
+            <div>
+              <div className="eyebrow">WORKSPACE / {page.toUpperCase()}</div>
+              <h1>{page === 'Generate' ? '새 미디어 만들기' : page === 'Jobs' ? '작업 큐' : page === 'Edit' ? '편집 · 모션그래픽' : page === 'Results' ? '결과물' : page === 'Usage' ? '사용량 리포트' : page === 'Connections' ? '연결 관리' : '설정'}</h1>
+            </div>
+            <div className="topbar-actions">
+              <span className="system-pill"><span className="online-dot" /> LOCAL CORE</span>
+              <button className="icon-button" title="새 작업" aria-label="새 작업" onClick={() => setPage('Generate')}><Plus size={18} /></button>
+            </div>
+          </header>
 
-        {notice && <div className="toast"><CheckCircle2 size={16} />{notice}<button onClick={() => setNotice('')} aria-label="알림 닫기"><X size={14} /></button></div>}
+          {notice && <div className="toast"><CheckCircle2 size={16} />{notice}<button onClick={() => setNotice('')} aria-label="알림 닫기"><X size={14} /></button></div>}
 
-        {page === 'Generate' && <GeneratePage onSubmit={submit} />}
-        {page === 'Jobs' && <JobsPage jobs={jobs} onNew={() => setPage('Generate')} />}
-        {page === 'Edit' && <EditPage />}
-        {page === 'Results' && <ResultsPage />}
-        {page === 'Usage' && <UsagePage />}
-        {page === 'Settings' && <SettingsPage />}
-      </main>
+          {page === 'Generate' && <GeneratePage onSubmit={submit} />}
+          {page === 'Jobs' && <JobsPage jobs={jobs} onNew={() => setPage('Generate')} />}
+          {page === 'Edit' && <EditPage />}
+          {page === 'Results' && <ResultsPage />}
+          {page === 'Usage' && <UsagePage />}
+          {page === 'Connections' && <ConnectionsPage />}
+          {page === 'Settings' && <SettingsPage />}
+        </main>
+      )}
     </div>
   )
 }

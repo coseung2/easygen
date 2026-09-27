@@ -77,6 +77,11 @@ export type PipelineEvent = {
   installed_script?: string | null
   executable?: string
   artifact?: string
+  /** 글꼴 대체 안내(font_missing)와 도구 미설치 안내(tool_missing)에 쓴다. */
+  font?: string
+  requested?: string
+  substituted?: string
+  tool?: string
 }
 
 export type RendererCapability = {
@@ -117,6 +122,28 @@ export const writeJsonFile = (path: string, value: unknown) =>
 
 export const makeThumbnail = (path: string, time = 1.5) =>
   call<string>('make_thumbnail', { path, time })
+
+/** 무음 트랙. 오디오 입력 없이 타이포·모션만 렌더할 때 쓴다. */
+export const generateSilence = (path: string, seconds: number) =>
+  call<string>('generate_silence', { path, seconds })
+
+/** 단색 배경 클립. 배경 소재가 없을 때 쓴다. */
+export const generateColorClip = (
+  path: string,
+  seconds: number,
+  width: number,
+  height: number,
+  color?: string,
+) => call<string>('generate_color_clip', { path, seconds, width, height, color: color ?? null })
+
+/** 이미지 한 장을 지정 길이의 클립으로 만든다. */
+export const generateStillClip = (
+  path: string,
+  source: string,
+  seconds: number,
+  width: number,
+  height: number,
+) => call<string>('generate_still_clip', { path, source, seconds, width, height })
 
 export const revealInExplorer = (path: string) => call<void>('reveal_in_explorer', { path })
 
