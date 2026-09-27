@@ -1,3 +1,4 @@
+import { REQUIRED_FIXTURES } from './fixtures'
 import {
   ACCOUNT_STATUSES,
   CAPABILITY_IDS,
@@ -61,8 +62,12 @@ export function contractViolations(): ContractViolation[] {
   }
 
   const covered = new Set(VERIFICATION_SCENARIOS.flatMap((scenario) => scenario.requiredStates))
-  for (const state of [...JOB_STATUSES, ...STUDIO_RUN_STATUSES, ...NODE_STATUSES, ...CONNECTION_STATUSES, ...CONNECTION_HEALTH, ...COST_STATES, ...PROJECT_STATUSES, ...MATERIAL_STATUSES, ...ACCOUNT_STATUSES]) {
+  for (const state of [...JOB_STATUSES, ...STUDIO_RUN_STATUSES, ...NODE_STATUSES, ...CONNECTION_STATUSES, ...CONNECTION_HEALTH, ...COST_STATES, ...PROJECT_STATUSES, ...MATERIAL_STATUSES, ...ACCOUNT_STATUSES, ...REQUIRED_FIXTURES]) {
     if (!covered.has(state)) violations.push({ code: 'scenario-gap', detail: `${state} is not covered by a verification scenario` })
+  }
+  const expected = ['empty', 'loading', 'pending', 'failed', 'cancelled', 'stale', 'offline', 'expired-login', 'cost-unknown']
+  if (REQUIRED_FIXTURES.length !== expected.length || expected.some((state) => !REQUIRED_FIXTURES.includes(state as typeof REQUIRED_FIXTURES[number])) || new Set(REQUIRED_FIXTURES).size !== expected.length) {
+    violations.push({ code: 'fixture-gap', detail: 'the exact nine unique renderable state fixtures are required' })
   }
   return violations
 }

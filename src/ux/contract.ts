@@ -196,6 +196,7 @@ export interface VerificationScenario {
 }
 
 export const VERIFICATION_SCENARIOS: VerificationScenario[] = [
+  { id: 'state-fixtures', mode: 'review', path: '상태 fixture', requiredStates: ['empty', 'loading', 'pending', 'failed', 'cancelled', 'stale', 'offline', 'expired-login', 'cost-unknown'] },
   {
     id: 'generate-to-cost',
     mode: 'execute',

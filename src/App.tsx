@@ -1,14 +1,14 @@
-import React from 'react'
+import React, { lazy, Suspense } from 'react'
 import { listenSafely } from './lib/listen'
 import { CheckCircle2, Plus, X, Zap } from 'lucide-react'
-import { EditPage } from './EditPage'
-import { ConnectionsPage } from './pages/ConnectionsPage'
-import { StudioPage } from './studio/StudioPage'
-import { UsagePage } from './UsagePage'
-import { GeneratePage } from './pages/GeneratePage'
-import { JobsPage } from './pages/JobsPage'
-import { ResultsPage } from './pages/ResultsPage'
-import { SettingsPage } from './pages/SettingsPage'
+const EditPage = lazy(() => import('./EditPage').then((module) => ({ default: module.EditPage })))
+const ConnectionsPage = lazy(() => import('./pages/ConnectionsPage').then((module) => ({ default: module.ConnectionsPage })))
+const StudioPage = lazy(() => import('./studio/StudioPage').then((module) => ({ default: module.StudioPage })))
+const UsagePage = lazy(() => import('./UsagePage').then((module) => ({ default: module.UsagePage })))
+const GeneratePage = lazy(() => import('./pages/GeneratePage').then((module) => ({ default: module.GeneratePage })))
+const JobsPage = lazy(() => import('./pages/JobsPage').then((module) => ({ default: module.JobsPage })))
+const ResultsPage = lazy(() => import('./pages/ResultsPage').then((module) => ({ default: module.ResultsPage })))
+const SettingsPage = lazy(() => import('./pages/SettingsPage').then((module) => ({ default: module.SettingsPage })))
 import { call, isTauri } from './lib/tauri'
 import { listRecentJobs, storedJobToJob } from './lib/jobs'
 import type { Job, JobStage, JobKind } from './types'
@@ -119,6 +119,7 @@ export function App() {
         </div>
       </aside>
 
+      <Suspense fallback={<main className="workspace"><p className="dim">화면을 불러오는 중…</p></main>}>
       {page === 'Studio' ? (
         <main className="workspace studio-mode">
           <StudioPage />
@@ -147,6 +148,7 @@ export function App() {
           {page === 'Settings' && <SettingsPage />}
         </main>
       )}
+      </Suspense>
     </div>
   )
 }
