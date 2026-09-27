@@ -22,6 +22,7 @@ import {
   saveConnection,
   setConnectionEnabled,
   setConnectionToolEnabled,
+  callConnectionTool,
   testConnection,
   type ConnectionRow,
   type ConnectionToolRow,
@@ -63,6 +64,7 @@ export function ConnectionsPage() {
   const [workflowTool, setWorkflowTool] = React.useState('modal-h3')
   const [workflowLocation, setWorkflowLocation] = React.useState('')
   const [workflowNotes, setWorkflowNotes] = React.useState('')
+  const [section, setSection] = React.useState<'connections' | 'accounts' | 'workflows'>('connections')
 
   const refresh = React.useCallback(async () => {
     if (!isTauri) {
@@ -288,6 +290,20 @@ export function ConnectionsPage() {
       setBusy('')
     }
   }
+  const verifyTool = async (connection: ConnectionRow) => {
+    try {
+      const cached = tools[connection.id] ?? []
+      const available = cached.length > 0 ? cached : await listConnectionTools(connection.id)
+      if (cached.length === 0) setTools((current) => ({ ...current, [connection.id]: available }))
+      const tool = available.find((item) => item.enabled)
+      if (!tool) return setError('실행 검증할 사용 중인 도구가 없습니다. 도구를 먼저 확인하세요.')
+      await callConnectionTool(connection.id, tool.name, {})
+      setNotice(`${tool.name} 실제 호출을 검증했습니다.`)
+      await refresh()
+    } catch (verifyError) {
+      setError(String(verifyError))
+    }
+  }
 
   const toggleTool = async (connection: ConnectionRow, tool: ConnectionToolRow) => {
     if (!isTauri) return setError(browserCapability('persistProject').reason)
@@ -330,6 +346,14 @@ export function ConnectionsPage() {
 
   return (
     <div className="page-stack">
+      <div className="seg" role="tablist" aria-label="연결 운영">
+        <button className={section === 'connections' ? 'active' : ''} onClick={() => setSection('connections')}>MCP 연결</button>
+        <button className={section === 'accounts' ? 'active' : ''} onClick={() => setSection('accounts')}>ChatGPT 계정</button>
+        <button className={section === 'workflows' ? 'active' : ''} onClick={() => setSection('workflows')}>Modal 워크플로</button>
+      </div>
+      {error && <p className="inline-warn">{error}</p>}
+      {notice && <p className="usage-notice"><Play size={13} />{notice}<button onClick={() => setNotice('')} aria-label="알림 닫기">×</button></p>}
+      {section === 'connections' && <>
       <section className="panel">
         <div className="panel-heading">
           <div>
@@ -388,9 +412,6 @@ export function ConnectionsPage() {
           </div>
         </div>
 
-        {error && <p className="inline-warn">{error}</p>}
-        {notice && <p className="usage-notice"><Play size={13} />{notice}<button onClick={() => setNotice('')} aria-label="알림 닫기">×</button></p>}
-
         <div className="table-scroll">
           <table className="dense-table">
             <thead>
@@ -426,10 +447,9 @@ export function ConnectionsPage() {
                     <td className="num">{connection.toolCount}</td>
                     <td>{connection.lastCheckedAt ? connection.lastCheckedAt.slice(5, 16).replace('T', ' ') : '-'}</td>
                     <td className="actions">
-                      <button className="row-action" disabled={busy === connection.id} onClick={() => void runTest(connection)}>연결 테스트</button>
-                      <button className="row-action" disabled={busy === connection.id || connection.toolCount === 0} onClick={() => void openTools(connection)}>도구 보기</button>
-                      <button className="row-action" onClick={() => void toggleEnabled(connection)}>{connection.enabled ? '사용 중지' : '사용'}</button>
-                      <button className="row-action danger" onClick={() => void remove(connection)}>삭제</button>
+                      <button className="row-action" disabled={busy === connection.id} onClick={() => connection.status === 'tools-ready' ? void verifyTool(connection) : connection.status === 'verified' ? void openTools(connection) : void runTest(connection)}>{connection.status === 'tools-ready' ? '실제 호출 검증' : connection.status === 'verified' ? '도구 확인' : '다음: 연결 테스트'}</button>
+                      <button className="row-action" onClick={() => void toggleEnabled(connection)}>{connection.enabled ? '먼저 사용 중지' : '다시 사용'}</button>
+                      {!connection.enabled && <button className="row-action danger" onClick={() => void remove(connection)}>사용 중지 후 삭제</button>}
                     </td>
                   </tr>
                   {(tools[connection.id] ?? []).length > 0 && (
@@ -455,15 +475,11 @@ export function ConnectionsPage() {
           </table>
         </div>
 
-        <p className="usage-note">
-          <Cable size={13} />
-          <span>
-            도구 목록만 확인한 연결은 `도구 확인됨`으로 표시되고, 실제 도구 호출이 성공하면 `실행 검증됨`으로 바뀝니다.
-            상태를 한 단계로 뭉뚱그리지 않습니다.
-          </span>
-        </p>
+        <p className="usage-note">비밀값은 저장하지 않고 환경변수 이름만 남깁니다. 저장됨은 테스트, 도구 확인됨은 실제 호출 검증이 다음 행동입니다.</p>
       </section>
+      </>}
 
+      {section === 'accounts' &&
       <section className="panel">
         <div className="panel-heading">
           <div>
@@ -533,7 +549,9 @@ export function ConnectionsPage() {
           </table>
         </div>
       </section>
+      }
 
+      {section === 'workflows' && <>
       <section className="panel">
         <div className="panel-heading">
           <div>
@@ -612,6 +630,8 @@ export function ConnectionsPage() {
           </table>
         </div>
       </section>
+      <p className="dim">등록됨과 실행 검증됨은 다른 상태입니다. 실제 실행 전에는 실행 검증됨으로 표시하지 않습니다.</p>
+      </>}
 
       <section className="panel">
         <div className="panel-heading">
