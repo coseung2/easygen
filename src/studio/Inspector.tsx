@@ -20,6 +20,7 @@ import { activeRunFor, cancelStudioRun, retryStudioDownload, startStudioRun } fr
 import { generatedAssetFor } from './runController'
 import { ChatPanel } from './ChatPanel'
 import { useStudioStore } from './store'
+import { browserCapability, confirmProtectedAction } from '../ux/stageOne'
 import { WORKFLOW_STATUS_LABELS, listWorkflows, type WorkflowRow } from '../lib/workflows'
 import { listModalProfiles, type ModalProfile } from '../lib/usage'
 import { checkToolCall } from './toolInput'
@@ -278,7 +279,7 @@ function NodeInspector({ id, onReveal, onNotice }: { id: string; onReveal: (path
           <button className="icon-button" title="노드 복제" onClick={() => duplicateNode(node.id)}>
             <Copy size={14} />
           </button>
-          <button className="icon-button danger" title="노드 삭제" onClick={() => removeNodes([node.id])}>
+          <button className="icon-button danger" title="노드 삭제" onClick={() => confirmProtectedAction(`“${node.title}” 노드와 연결된 입력을 삭제합니다. 실행 기록은 남습니다.`) && removeNodes([node.id])}>
             <Trash2 size={14} />
           </button>
         </div>
@@ -659,7 +660,7 @@ function ShotInspector({ id, onExpandShot }: { id: string; onExpandShot: (shotId
       <div className="inspector-head">
         <span className="section-kicker">샷 {shot.order + 1}</span>
         <div className="inspector-actions">
-          <button className="icon-button danger" title="샷 삭제" onClick={() => removeShot(shot.id)}>
+          <button className="icon-button danger" title="샷 삭제" onClick={() => confirmProtectedAction(`“${shot.title}” 샷을 삭제합니다. 연결된 제작 노드는 캔버스에 남습니다.`) && removeShot(shot.id)}>
             <Trash2 size={14} />
           </button>
         </div>
@@ -742,7 +743,7 @@ function AssetInspector({ id, onReveal }: { id: string; onReveal: (path: string)
       <div className="inspector-head">
         <span className="section-kicker">소재 · {asset.kind}</span>
         <div className="inspector-actions">
-          <button className="icon-button danger" title="소재 삭제" onClick={() => removeAsset(asset.id)}>
+          <button className="icon-button danger" title="소재 삭제" onClick={() => confirmProtectedAction(`“${asset.name}” 소재와 이를 참조하는 노드 ${referencing.length}개를 삭제합니다.`) && removeAsset(asset.id)}>
             <Trash2 size={14} />
           </button>
         </div>
@@ -824,6 +825,7 @@ function ProjectInspector({ onImportAssets, onNotice }: { onImportAssets: () => 
   }, [refresh])
 
   const saveAsTemplate = async () => {
+    if (!isTauri) return onNotice(browserCapability('persistProject').reason)
     const selection = useStudioStore.getState().selection
     const template = templateFromSelection()
     if (template.nodes.length === 0) {
@@ -907,6 +909,8 @@ function ProjectInspector({ onImportAssets, onNotice }: { onImportAssets: () => 
                 className="icon-button small danger"
                 title="템플릿 삭제"
                 onClick={() => {
+                  if (!isTauri) return onNotice(browserCapability('persistProject').reason)
+                  if (!confirmProtectedAction(`“${template.name}” 템플릿을 삭제합니다. 이미 놓인 노드는 남습니다.`)) return
                   void deleteTemplate(template.id).then(() => refresh()).catch((error) => onNotice(String(error)))
                 }}
               >

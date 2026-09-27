@@ -2,6 +2,7 @@
 import React from 'react'
 import { Boxes, Cable, Play, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { isTauri } from '../lib/tauri'
+import { browserCapability, confirmProtectedAction } from '../ux/stageOne'
 import {
   cancelLogin,
   ensureFresh,
@@ -93,6 +94,7 @@ export function ConnectionsPage() {
   }, [refreshWorkflows])
 
   const createWorkflow = async () => {
+    if (!isTauri) return setError(browserCapability('callExternalService').reason)
     setError('')
     setNotice('')
     try {
@@ -113,6 +115,8 @@ export function ConnectionsPage() {
   }
 
   const removeWorkflow = async (workflow: WorkflowRow) => {
+    if (!isTauri) return setError(browserCapability('persistProject').reason)
+    if (!confirmProtectedAction(`“${workflow.name}” 워크플로 등록을 삭제합니다. 프로젝트의 실행 기록은 남지만 이 워크플로를 다시 선택하려면 등록해야 합니다.`)) return
     try {
       await deleteWorkflow(workflow.id)
       await refreshWorkflows()
@@ -166,6 +170,7 @@ export function ConnectionsPage() {
   }, [attempt, refreshAccounts])
 
   const startLogin = async () => {
+    if (!isTauri) return setError(browserCapability('callExternalService').reason)
     setError('')
     setNotice('')
     try {
@@ -200,6 +205,7 @@ export function ConnectionsPage() {
   }
 
   const refreshAccount = async (account: ChatGptAccount) => {
+    if (!isTauri) return setError(browserCapability('callExternalService').reason)
     setError('')
     try {
       const updated = await ensureFresh(account.id)
@@ -212,6 +218,8 @@ export function ConnectionsPage() {
   }
 
   const removeAccount = async (account: ChatGptAccount) => {
+    if (!isTauri) return setError(browserCapability('persistProject').reason)
+    if (!confirmProtectedAction(`${account.email ?? account.displayName ?? account.id} 계정 연결과 저장된 토큰을 삭제합니다.`)) return
     try {
       await logoutChatGpt(account.id)
       setNotice('계정 연결을 해제했습니다. 보관하던 토큰도 삭제했습니다.')
@@ -222,6 +230,7 @@ export function ConnectionsPage() {
   }
 
   const create = async () => {
+    if (!isTauri) return setError(browserCapability('callExternalService').reason)
     setError('')
     setNotice('')
     const config: Record<string, unknown> = kind === 'mcp-http'
@@ -250,6 +259,7 @@ export function ConnectionsPage() {
   }
 
   const runTest = async (connection: ConnectionRow) => {
+    if (!isTauri) return setError(browserCapability('callExternalService').reason)
     setBusy(connection.id)
     setError('')
     setNotice('')
@@ -280,6 +290,7 @@ export function ConnectionsPage() {
   }
 
   const toggleTool = async (connection: ConnectionRow, tool: ConnectionToolRow) => {
+    if (!isTauri) return setError(browserCapability('persistProject').reason)
     try {
       await setConnectionToolEnabled(connection.id, tool.name, !tool.enabled)
       setTools((current) => ({
@@ -292,6 +303,7 @@ export function ConnectionsPage() {
   }
 
   const toggleEnabled = async (connection: ConnectionRow) => {
+    if (!isTauri) return setError(browserCapability('persistProject').reason)
     try {
       await setConnectionEnabled(connection.id, !connection.enabled)
       await refresh()
@@ -301,6 +313,8 @@ export function ConnectionsPage() {
   }
 
   const remove = async (connection: ConnectionRow) => {
+    if (!isTauri) return setError(browserCapability('persistProject').reason)
+    if (!confirmProtectedAction(`“${connection.name}” 연결과 저장된 도구 ${connection.toolCount}개를 삭제합니다. 프로젝트 문서와 실행 기록은 남습니다.`)) return
     try {
       await deleteConnection(connection.id)
       setTools((current) => {
@@ -362,7 +376,7 @@ export function ConnectionsPage() {
             </label>
           )}
           <div className="conn-form-actions">
-            <button className="primary-action small" onClick={() => void create()}>
+            <button className="primary-action small" disabled={!isTauri} title={isTauri ? undefined : browserCapability('callExternalService').nextAction} onClick={() => void create()}>
               <Plus size={13} />
               연결 추가
             </button>
@@ -460,7 +474,7 @@ export function ConnectionsPage() {
               토큰은 화면으로 전달되지 않고, 요청 직전에 만료를 확인해 계정당 한 번만 갱신합니다.
             </p>
           </div>
-          <button className="primary-action small" disabled={Boolean(attempt)} onClick={() => void startLogin()}>
+          <button className="primary-action small" disabled={!isTauri || Boolean(attempt)} title={isTauri ? undefined : browserCapability('callExternalService').nextAction} onClick={() => void startLogin()}>
             <Play size={13} />
             ChatGPT로 로그인
           </button>
@@ -554,7 +568,7 @@ export function ConnectionsPage() {
             <input value={workflowNotes} onChange={(event) => setWorkflowNotes(event.target.value)} placeholder="입출력·모델·검증 범위" />
           </label>
           <div className="conn-form-actions">
-            <button className="primary-action small" onClick={() => void createWorkflow()}>
+            <button className="primary-action small" disabled={!isTauri} title={isTauri ? undefined : browserCapability('callExternalService').nextAction} onClick={() => void createWorkflow()}>
               <Plus size={13} />
               워크플로 등록
             </button>

@@ -3,6 +3,7 @@
 import React from 'react'
 import { ChevronDown, ChevronLeft, ChevronRight, Clapperboard, Trash2 } from 'lucide-react'
 import { useStudioStore } from './store'
+import { confirmProtectedAction } from '../ux/stageOne'
 import { SHOT_ROLES } from './types'
 
 export function StoryboardBar({ onExpandShot }: { onExpandShot: (shotId: string) => void }) {
@@ -112,7 +113,7 @@ export function StoryboardBar({ onExpandShot }: { onExpandShot: (shotId: string)
                 <button
                   className="icon-button small danger"
                   title="샷 삭제"
-                  onClick={(event) => { event.stopPropagation(); removeShot(shot.id) }}
+                  onClick={(event) => { event.stopPropagation(); if (confirmProtectedAction(`“${shot.title}” 샷을 삭제합니다. 연결된 제작 노드는 캔버스에 남습니다.`)) removeShot(shot.id) }}
                 >
                   <Trash2 size={12} />
                 </button>

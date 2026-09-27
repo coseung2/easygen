@@ -45,6 +45,7 @@ import {
 import { evaluateConnection } from './graph'
 import { applyPipelineEvent, applyWorkerEvent, reconcileRuns } from './runController'
 import { useStudioStore, type AssetInput } from './store'
+import { browserCapability, confirmProtectedAction } from '../ux/stageOne'
 import { emptyDocument, normalizeDocument, type ConnectionKind, type NodeKind, type StudioProjectRecord, type StudioProjectSummary } from './types'
 
 const LAST_PROJECT_KEY = 'modal-gui.studio.lastProject'
@@ -64,7 +65,7 @@ export function StudioPage() {
   const openRecord = React.useCallback((record: StudioProjectRecord) => {
     const parsed = normalizeDocument(JSON.parse(record.documentJson) as unknown)
     useStudioStore.getState().openProject({ id: record.id, name: record.name, revision: record.revision, doc: parsed })
-    localStorage.setItem(LAST_PROJECT_KEY, record.id)
+    if (isTauri) localStorage.setItem(LAST_PROJECT_KEY, record.id)
     setMode('workspace')
     // 저장된 실행 기록을 읽어 완료된 결과를 후보로 복구한다.
     void reconcileRuns(record.id)
@@ -82,7 +83,7 @@ export function StudioPage() {
             return
           }
         } catch {
-          localStorage.removeItem(LAST_PROJECT_KEY)
+          if (isTauri) localStorage.removeItem(LAST_PROJECT_KEY)
         }
       }
       try {
@@ -97,6 +98,7 @@ export function StudioPage() {
   }, [openRecord])
 
   const create = async (name: string) => {
+    if (!isTauri) return setError(browserCapability('persistProject').reason)
     setBusy(true)
     setError('')
     try {
@@ -123,6 +125,10 @@ export function StudioPage() {
   }
 
   const remove = async (id: string) => {
+    if (!isTauri) return setError(browserCapability('persistProject').reason)
+    const project = projects.find((item) => item.id === id)
+    const label = project ? `“${project.name}” 프로젝트` : '이 프로젝트'
+    if (!confirmProtectedAction(`${label}를 삭제합니다. 노드 ${project?.nodeCount ?? 0}개와 소재 ${project?.assetCount ?? 0}개의 연결이 프로젝트 목록에서 사라집니다.`)) return
     try {
       await deleteProject(id)
       if (localStorage.getItem(LAST_PROJECT_KEY) === id) localStorage.removeItem(LAST_PROJECT_KEY)
@@ -133,6 +139,7 @@ export function StudioPage() {
   }
 
   const importFromFolder = async () => {
+    if (!isTauri) return setError(browserCapability('persistProject').reason)
     setError('')
     try {
       const dir = await pickDirectory('내보낸 프로젝트 폴더 선택')
@@ -163,7 +170,7 @@ export function StudioPage() {
   if (mode === 'workspace') {
     return (
       <ReactFlowProvider>
-        <StudioWorkspace onExit={exitWorkspace} />
+        <StudioWorkspace onExit={exitWorkspace} onExitError={setError} />
       </ReactFlowProvider>
     )
   }
@@ -185,7 +192,7 @@ export function StudioPage() {
   )
 }
 
-function StudioWorkspace({ onExit }: { onExit: () => Promise<void> }) {
+function StudioWorkspace({ onExit, onExitError }: { onExit: () => Promise<void>; onExitError: (message: string) => void }) {
   const reactFlow = useReactFlow()
   const projectName = useStudioStore((state) => state.projectName)
   const doc = useStudioStore((state) => state.doc)
@@ -209,6 +216,7 @@ function StudioWorkspace({ onExit }: { onExit: () => Promise<void> }) {
   const placementRef = React.useRef(0)
 
   const saveNow = React.useCallback(async () => {
+    if (!isTauri) return
     if (savingRef.current) {
       pendingRef.current = true
       return
@@ -238,6 +246,36 @@ function StudioWorkspace({ onExit }: { onExit: () => Promise<void> }) {
     } finally {
       savingRef.current = false
     }
+  }, [])
+
+  const requestExit = async () => {
+    const state = useStudioStore.getState()
+    if (state.saveState === 'saving') {
+      onExitError('저장이 끝난 뒤 프로젝트 목록으로 돌아갈 수 있습니다. 저장을 다시 시도하세요.')
+      return
+    }
+    if (state.saveState === 'error' || state.dirty) {
+      const retry = window.confirm(state.saveState === 'error' ? `저장에 실패했습니다: ${state.saveError}\n다시 저장한 뒤 나갈까요?` : '저장되지 않은 변경이 있습니다. 저장한 뒤 나갈까요?')
+      if (retry) {
+        await saveNow()
+        if (useStudioStore.getState().saveState === 'error' || useStudioStore.getState().dirty) return
+      } else if (!confirmProtectedAction('저장하지 않고 프로젝트 목록으로 돌아갑니다. 저장되지 않은 변경은 현재 화면에서 사라집니다.')) {
+        return
+      }
+    }
+    await onExit()
+  }
+
+  React.useEffect(() => {
+    const onLeave = (event: BeforeUnloadEvent) => {
+      const state = useStudioStore.getState()
+      if (state.dirty || state.saveState === 'saving' || state.saveState === 'error') {
+        event.preventDefault()
+        event.returnValue = ''
+      }
+    }
+    window.addEventListener('beforeunload', onLeave)
+    return () => window.removeEventListener('beforeunload', onLeave)
   }, [])
 
   // 자동 저장: 편집이 멈추고 2.5초 뒤에 저장한다. 실행 결과 저장과는 별개다.
@@ -325,6 +363,7 @@ function StudioWorkspace({ onExit }: { onExit: () => Promise<void> }) {
 
   // 내보내기: 제작 문서와 선택 소재를 폴더로 복사한다. 인증값은 포함하지 않는다.
   const exportToFolder = React.useCallback(async () => {
+    if (!isTauri) return setNotice(browserCapability('persistProject').reason)
     const state = useStudioStore.getState()
     if (!state.projectId) return
     try {
@@ -417,7 +456,7 @@ function StudioWorkspace({ onExit }: { onExit: () => Promise<void> }) {
   return (
     <div className="studio-shell">
       <header className="studio-topbar">
-        <button className="secondary-action small" onClick={() => void onExit()}>← 프로젝트 목록</button>
+        <button className="secondary-action small" onClick={() => void requestExit()}>← 프로젝트 목록</button>
         <input
           className="studio-name"
           value={projectName}

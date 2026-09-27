@@ -1,6 +1,7 @@
 import React from 'react'
 import { CircleAlert, Pencil, Plus, RefreshCw, Trash2, X } from 'lucide-react'
 import { isTauri } from './lib/tauri'
+import { browserCapability, confirmProtectedAction } from './ux/stageOne'
 import {
   archiveModalProfile,
   estimatedRemaining,
@@ -93,6 +94,7 @@ export function UsagePage() {
   }, [reload])
 
   const runSync = async (ids?: string[]) => {
+    if (!isTauri) return setError(browserCapability('callExternalService').reason)
     setBusy('sync')
     setNotice('')
     try {
@@ -114,6 +116,7 @@ export function UsagePage() {
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault()
+    if (!isTauri) return setError(browserCapability('persistProject').reason)
     if (!form) return
     const draft: ProfileDraft = {
       id: form.id,
@@ -143,6 +146,7 @@ export function UsagePage() {
   }
 
   const toggle = async (profile: ModalProfile) => {
+    if (!isTauri) return setError(browserCapability('persistProject').reason)
     setBusy(profile.id)
     try {
       setProfiles(await setModalProfileEnabled(profile.id, !profile.enabled))
@@ -155,6 +159,8 @@ export function UsagePage() {
   }
 
   const archive = async (profile: ModalProfile) => {
+    if (!isTauri) return setError(browserCapability('persistProject').reason)
+    if (!confirmProtectedAction(`“${profile.name}” 계정을 보관합니다. 실행 기록과 비용은 남고 새 작업에는 선택할 수 없습니다.`)) return
     setBusy(profile.id)
     try {
       setProfiles(await archiveModalProfile(profile.id))
@@ -187,7 +193,7 @@ export function UsagePage() {
           <button className="secondary-action" onClick={() => void runSync()} disabled={busy !== '' || profiles.length === 0}>
             <RefreshCw size={14} />{busy === 'sync' ? '동기화 중…' : '전체 동기화'}
           </button>
-          <button className="secondary-action" onClick={() => { setForm(form ? null : blankForm()); setError('') }}>
+          <button className="secondary-action" disabled={!isTauri} title={isTauri ? undefined : browserCapability('persistProject').nextAction} onClick={() => { setForm(form ? null : blankForm()); setError('') }}>
             <Plus size={15} />계정 추가
           </button>
         </div>

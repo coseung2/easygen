@@ -6,6 +6,7 @@ import { ThumbGrid } from './Gallery'
 import { DELIVERABLES_ROOT, EDITS_ROOT, analyzeAudio, buildStoryboard, formatBytes, listPipelineInputs, listRenderers, readJsonFile, renderSpec, revealInExplorer, slug, writeJsonFile } from './lib/pipeline'
 import type { Markers, PipelineEvent, PipelineInputs, RendererInfo, Storyboard, StoryboardShot, TextCue } from './lib/pipeline'
 import { isTauri } from './lib/tauri'
+import { browserCapability } from './ux/stageOne'
 
 const DEFAULT_CUES: TextCue[] = [
   { start: 0, end: 5, text: 'PUBG: BATTLEGROUNDS', size: 86 },
@@ -250,6 +251,10 @@ export function EditPage() {
   }
 
   const onRender = async (mode: 'base' | 'graphics') => {
+    if (!isTauri) {
+      setNotice(browserCapability('renderLocally').reason)
+      return
+    }
     if (!audio) {
       setNotice('음악 트랙을 찾지 못했습니다. 고급 설정에서 트랙을 선택하세요.')
       return
@@ -341,7 +346,7 @@ export function EditPage() {
             </button>
           ))}
         </div>
-        <button className="primary-action" disabled={busy} onClick={() => void onRender('graphics')}>
+        <button className="primary-action" disabled={!isTauri || busy} title={isTauri ? undefined : browserCapability('renderLocally').nextAction} onClick={() => void onRender('graphics')}>
           <Play size={15} fill="currentColor" />
           {busy ? '진행 중…' : handoff ? '프로젝트 준비' : '렌더'}
         </button>
@@ -350,7 +355,7 @@ export function EditPage() {
         <span className="dim source-line">
           {shots.length}샷 · 합계 {total.toFixed(2)}s · {audioName || '음악 없음'}
         </span>
-        <button className="icon-button" onClick={() => void refresh()} title="소스 다시 읽기" aria-label="소스 다시 읽기"><RefreshCw size={15} /></button>
+        <button className="icon-button" disabled={!isTauri} onClick={() => void refresh()} title={isTauri ? '소스 다시 읽기' : browserCapability('renderLocally').nextAction} aria-label="소스 다시 읽기"><RefreshCw size={15} /></button>
       </div>
 
       <div className="toolbar">

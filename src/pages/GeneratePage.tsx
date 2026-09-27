@@ -5,6 +5,7 @@ import { listModalProfiles } from '../lib/usage'
 import type { ModalProfile } from '../lib/usage'
 import type { JobKind } from '../types'
 import { defaultLyrics, defaultStyle, modeLabels, type Draft } from '../app-config'
+import { browserCapability } from '../ux/stageOne'
 
 export function GeneratePage({ onSubmit }: { onSubmit: (draft: Draft) => Promise<void> }) {
   const [kind, setKind] = React.useState<JobKind>('fl2v')
@@ -37,6 +38,7 @@ export function GeneratePage({ onSubmit }: { onSubmit: (draft: Draft) => Promise
   const activeProfiles = profiles.filter((profile) => profile.enabled)
   const selectedProfile = activeProfiles.find((profile) => profile.id === profileId)
   const canSubmit = (isMusic ? style.trim().length > 0 && lyrics.trim().length > 0 : prompt.trim().length > 0 && (kind === 't2v' || inputPath.trim().length > 0)) && (!isTauri || Boolean(selectedProfile))
+  const previewBlock = browserCapability('callExternalService')
 
   const chooseFile = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] as (File & { path?: string }) | undefined
@@ -112,9 +114,11 @@ export function GeneratePage({ onSubmit }: { onSubmit: (draft: Draft) => Promise
           <span className="target-note">
             {isTauri && !selectedProfile
               ? '사용량 탭에서 Modal 계정을 추가하거나 사용으로 전환하세요.'
+              : !isTauri
+                ? previewBlock.reason
               : isMusic ? 'YuE2 · 48 kHz stereo · F:\\modal-gui\\music' : 'H3 L40S · F:\\modal-gui\\h3-clips\\generated'}
           </span>
-          <button className="primary-action" disabled={!canSubmit}>
+          <button className="primary-action" disabled={!isTauri || !canSubmit} title={isTauri ? undefined : previewBlock.nextAction}>
             <Play size={16} fill="currentColor" />
             {isMusic ? '음악 생성' : variants > 1 ? variants + '개 생성' : '영상 생성'}
           </button>
