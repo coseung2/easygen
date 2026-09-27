@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "check:worker": "python -m unittest discover -s worker -p test_*.py",
-    "check:renderers": "python -m unittest tools.test_renderers"
+    "check:renderers": "python -m unittest tools.test_renderers",
+    "check:ux-contract": "tsc -p tools/tsconfig.ux-contract.json --noEmit && node tools/run_ux_contract_check.cjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.8.0",
