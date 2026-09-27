@@ -359,7 +359,6 @@ export function ConnectionsPage() {
           <div>
             <span className="section-kicker"><Cable size={12} /> 연결 관리</span>
             <h2>MCP 서버와 계정 연결</h2>
-            <p>로컬 stdio 서버는 실행 파일과 인수 배열로 등록합니다. 비밀값은 저장하지 않고 환경변수 이름만 남깁니다.</p>
           </div>
           <button className="secondary-action small" onClick={() => void refresh()}>
             <RefreshCw size={13} />
@@ -404,11 +403,6 @@ export function ConnectionsPage() {
               <Plus size={13} />
               연결 추가
             </button>
-            <span className="target-note">
-              {kind === 'mcp-stdio' || kind === 'mcp-http'
-                ? '연결 테스트는 서버를 실행해 도구 목록만 읽습니다. 유료 생성은 실행하지 않습니다.'
-                : '이 종류는 설정만 저장하고 자동 점검은 아직 없습니다.'}
-            </span>
           </div>
         </div>
 
@@ -475,7 +469,6 @@ export function ConnectionsPage() {
           </table>
         </div>
 
-        <p className="usage-note">비밀값은 저장하지 않고 환경변수 이름만 남깁니다. 저장됨은 테스트, 도구 확인됨은 실제 호출 검증이 다음 행동입니다.</p>
       </section>
       </>}
 
@@ -485,10 +478,6 @@ export function ConnectionsPage() {
           <div>
             <span className="section-kicker"><Cable size={12} /> ChatGPT 계정</span>
             <h2>구독 계정 연결</h2>
-            <p>
-              브라우저에서 로그인하면 앱이 콜백을 받아 토큰을 운영체제 저장소(DPAPI)에 보관합니다.
-              토큰은 화면으로 전달되지 않고, 요청 직전에 만료를 확인해 계정당 한 번만 갱신합니다.
-            </p>
           </div>
           <button className="primary-action small" disabled={!isTauri || Boolean(attempt)} title={isTauri ? undefined : browserCapability('callExternalService').nextAction} onClick={() => void startLogin()}>
             <Play size={13} />
@@ -557,10 +546,6 @@ export function ConnectionsPage() {
           <div>
             <span className="section-kicker"><Boxes size={12} /> 워크플로</span>
             <h2>등록된 생성 워크플로</h2>
-            <p>
-              Modal에 배포한 워크플로를 캔버스의 Comfy 워크플로 노드에서 선택합니다.
-              입출력 형식이 다른 워크플로를 함께 등록해 같은 캔버스에서 쓸 수 있습니다.
-            </p>
           </div>
           <button className="secondary-action small" onClick={() => void refreshWorkflows()}>
             <RefreshCw size={13} />
@@ -590,7 +575,6 @@ export function ConnectionsPage() {
               <Plus size={13} />
               워크플로 등록
             </button>
-            <span className="target-note">등록과 실행 검증은 다릅니다. 실제 실행이 확인된 워크플로만 `실행 검증됨`으로 표시됩니다.</span>
           </div>
         </div>
 
@@ -630,7 +614,6 @@ export function ConnectionsPage() {
           </table>
         </div>
       </section>
-      <p className="dim">등록됨과 실행 검증됨은 다른 상태입니다. 실제 실행 전에는 실행 검증됨으로 표시하지 않습니다.</p>
       </>}
 
       <section className="panel">
@@ -638,7 +621,6 @@ export function ConnectionsPage() {
           <div>
             <span className="section-kicker"><Trash2 size={12} /> 정리</span>
             <h2>등록된 연결 정리</h2>
-            <p>연결을 삭제하면 저장된 설정과 도구 목록이 함께 사라집니다. 프로젝트 문서와 실행 기록은 남습니다.</p>
           </div>
         </div>
       </section>

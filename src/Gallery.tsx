@@ -13,7 +13,7 @@ export function ThumbGrid({ entries, selected, onSelect }: {
   onSelect: (path: string) => void
 }) {
   if (entries.length === 0) {
-    return <p className="dim">아직 결과물이 없습니다.</p>
+    return <p className="dim">결과물 없음</p>
   }
   return (
     <div className="thumb-grid">

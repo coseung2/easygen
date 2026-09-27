@@ -81,10 +81,9 @@ export function TimelinePanel({
       <div className="timeline-panel empty">
         <span className="timeline-title">타임라인</span>
         {candidates.length === 0 ? (
-          <p className="dim">타임라인으로 편집할 타이포·모션·편집 노드가 아직 없습니다. 왼쪽 패널에서 추가하세요.</p>
+          <p className="dim">편집 노드 없음</p>
         ) : (
           <div className="timeline-picker">
-            <span className="dim">편집할 노드를 선택하세요:</span>
             {candidates.map((item) => (
               <button
                 key={item.id}
@@ -195,9 +194,7 @@ export function TimelinePanel({
                 중단 요청
               </button>
             </>
-          ) : (
-            <p className="dim">실행은 캔버스 노드의 버튼만 사용합니다. 여기서는 시간과 결과를 확인합니다.</p>
-          )}
+          ) : null}
         </div>
       </header>
 

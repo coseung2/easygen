@@ -45,9 +45,7 @@ export function StoryboardBar({ onExpandShot }: { onExpandShot: (shotId: string)
       {!collapsed && (
         <div className="storyboard-strip">
           {ordered.length === 0 && (
-            <p className="dim">
-              아직 샷이 없습니다. 샷을 추가하면 순서·예상 길이·정확한 문구를 정하고, 캔버스에 제작 노드를 펼칠 수 있습니다.
-            </p>
+            <p className="dim">샷 없음</p>
           )}
           {ordered.map((shot, index) => (
             <article

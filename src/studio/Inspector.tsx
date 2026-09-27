@@ -166,7 +166,7 @@ function ProfileSelect({ field, value, onChange }: { field: FieldSpec; value: Co
       )}
       {archived && <small className="bad">선택한 계정을 찾을 수 없습니다. 다른 계정을 고르세요.</small>}
       {rows.length === 0 && !error && (
-        <small className="dim">등록된 Modal 계정이 없습니다. 사용량 화면에서 계정을 등록하세요.</small>
+        <small className="dim">계정 없음</small>
       )}
       {error && <small className="bad">{error}</small>}
     </label>
@@ -203,7 +203,7 @@ function WorkflowSelect({ field, value, onChange }: { field: FieldSpec; value: C
         ))}
       </select>
       {rows.length === 0 && !error && (
-        <small className="dim">등록된 워크플로가 없습니다. 연결 관리 화면의 워크플로에서 등록하세요.</small>
+        <small className="dim">워크플로 없음</small>
       )}
       {selected && (
         <small className="dim">
@@ -329,7 +329,7 @@ function NodeInspector({ id, onReveal, onNotice }: { id: string; onReveal: (path
       {node.kind === 'select' && (
         <section className="inspector-section">
           <h3 className="inspector-title">후보 {candidates.length}</h3>
-          {candidates.length === 0 && <p className="dim">상위 노드의 결과 소재가 아직 없습니다. 생성 노드를 연결하고 실행하면 후보가 쌓입니다.</p>}
+          {candidates.length === 0 && <p className="dim">후보 없음</p>}
           <div className="candidate-list">
             {candidates.map((candidate) => (
               <button
@@ -350,7 +350,7 @@ function NodeInspector({ id, onReveal, onNotice }: { id: string; onReveal: (path
               </button>
             ))}
           </div>
-          {selectedAsset && <p className="dim">선택 고정: {selectedAsset.name}</p>}
+          {selectedAsset && <p className="dim">{selectedAsset.name}</p>}
         </section>
       )}
 
@@ -358,7 +358,7 @@ function NodeInspector({ id, onReveal, onNotice }: { id: string; onReveal: (path
         <h3 className="inspector-title">
           <Link2 size={13} /> 참조 입력 {incoming.length > 0 ? `(${incoming.length})` : ''}
         </h3>
-        {incoming.length === 0 && <p className="dim">연결된 입력이 없습니다. 캔버스에서 포트를 끌어 연결하세요.</p>}
+        {incoming.length === 0 && <p className="dim">입력 없음</p>}
         <div className="ref-list">
           {[...assetRefs, ...otherRefs].map((edge) => {
             const sourceNode = nodeById.get(edge.source)
@@ -417,11 +417,7 @@ function NodeInspector({ id, onReveal, onNotice }: { id: string; onReveal: (path
       <section className="inspector-section">
         <h3 className="inspector-title">결과 후보 {node.results.length > 0 ? `(${node.results.length})` : ''}</h3>
         {node.results.length === 0 && (
-          <p className="dim">
-            {spec.executionStage === null
-              ? '기획·구성 노드는 실행 대신 다른 노드의 입력으로 쓰입니다.'
-              : `아직 결과가 없습니다. 실행하면 결과가 이 노드의 후보로 등록됩니다.`}
-          </p>
+          <p className="dim">결과 없음</p>
         )}
         <div className="result-strip">
           {node.results.map((assetId) => {
@@ -445,13 +441,7 @@ function NodeInspector({ id, onReveal, onNotice }: { id: string; onReveal: (path
       <section className="inspector-section">
         <h3 className="inspector-title">실행 기록 {runs.filter((run) => run.nodeId === node.id).length > 0 ? `(${runs.filter((run) => run.nodeId === node.id).length})` : ''}</h3>
         {runs.filter((run) => run.nodeId === node.id).length === 0 && (
-          <p className="dim">
-            {spec.executionStage === null
-              ? '이 노드는 실행되지 않습니다.'
-              : isRunnable(node.kind)
-                ? '아직 실행 기록이 없습니다. 노드 카드의 실행 버튼만 사용하세요.'
-                : `실행 연결은 ${spec.executionStage}단계에서 추가됩니다.`}
-          </p>
+          <p className="dim">실행 기록 없음</p>
         )}
         <div className="run-list">
           {runs.filter((run) => run.nodeId === node.id).slice(0, 6).map((run) => (
@@ -486,12 +476,12 @@ function NodeInspector({ id, onReveal, onNotice }: { id: string; onReveal: (path
                 중단
               </button>
             )}
-            {!activeRun && <p className="dim">{node.status === 'stale' ? '입력이 바뀌었습니다. 노드의 다시 실행을 사용하거나 이전 결과를 확인하세요.' : node.status === 'failed' ? '실패 원인을 확인한 뒤 노드에서 다시 실행하세요.' : '실행은 노드 카드의 버튼 하나만 사용합니다.'}</p>}
+            {!activeRun && <p className="dim">{node.status === 'stale' ? '입력 변경됨' : node.status === 'failed' ? '실패' : ''}</p>}
             {runs.some((run) => run.nodeId === node.id && run.status === 'prepared' && (run.outputPath || run.remotePath)) && <button className="secondary-action small" onClick={() => {
               const prepared = runs.find((run) => run.nodeId === node.id && run.status === 'prepared' && (run.outputPath || run.remotePath))
               if (prepared) onReveal(prepared.outputPath || prepared.remotePath || '')
             }}>준비한 프로젝트 열기</button>}
-            {activeRun?.status === 'cancel_requested' && <p className="dim">중단 확인을 기다리는 중입니다. 확인 전에는 다시 실행할 수 없습니다.</p>}
+            {activeRun?.status === 'cancel_requested' && <p className="dim">중단 확인 대기</p>}
           </div>
         )}
       </section>
@@ -590,10 +580,10 @@ function ToolNodeSection({ node, onNotice }: { node: StudioNode; onNotice: (mess
         </select>
       </label>
       {connections.length === 0 && (
-        <p className="dim">사이드바의 연결 관리 화면에서 MCP 서버를 등록하고 연결 테스트를 실행하세요.</p>
+        <p className="dim">연결 없음</p>
       )}
       {connectionId && tools.length === 0 && (
-        <p className="dim">이 연결에서 확인된 도구가 없습니다. 연결 관리에서 연결 테스트를 다시 실행하세요.</p>
+        <p className="dim">도구 없음</p>
       )}
       {compatibility && !compatibility.ok && <p className="inline-warn">{compatibility.reason}</p>}
       {detected.length > 0 && (
@@ -714,7 +704,7 @@ function ShotInspector({ id, onExpandShot }: { id: string; onExpandShot: (shotId
 
       <section className="inspector-section">
         <h3 className="inspector-title">연결된 제작 노드 ({shotNodes.length})</h3>
-        {shotNodes.length === 0 && <p className="dim">아직 노드가 없습니다. 아래 버튼으로 샷에 필요한 노드를 만드세요.</p>}
+        {shotNodes.length === 0 && <p className="dim">노드 없음</p>}
         <div className="chip-row">
           {shotNodes.map((node) => (
             <button key={node.id} className="chip" onClick={() => setSelection({ type: 'node', id: node.id })}>
@@ -875,7 +865,6 @@ function ProjectInspector({ onImportAssets, onNotice }: { onImportAssets: () => 
 
       <section className="inspector-section">
         <h3 className="inspector-title">노드 그룹 템플릿 {templates.length > 0 ? `(${templates.length})` : ''}</h3>
-        <p className="dim">선택한 노드와 하위 노드를 템플릿으로 저장하고 다른 프로젝트에서 다시 놓습니다. 소재 경로는 복사하지 않습니다.</p>
         <div className="template-save">
           <input
             value={templateName}
@@ -952,9 +941,6 @@ function ProjectInspector({ onImportAssets, onNotice }: { onImportAssets: () => 
         )}
       </section>
 
-      <p className="dim">
-        캔버스가 비어 있으면 왼쪽 패널에서 노드를 추가하세요. 소재·대화·실행 기록은 이 프로젝트에 함께 저장됩니다.
-      </p>
     </div>
   )
 }

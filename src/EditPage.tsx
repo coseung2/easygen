@@ -367,7 +367,7 @@ export function EditPage() {
         </select>
         <button className="secondary-action" disabled={busy} onClick={() => void autoFill()}><Wand2 size={15} />자동 채우기</button>
         <button className="secondary-action" disabled={!spec || busy} onClick={() => void onSave()}>저장</button>
-        <span className="dim source-line">{spec ? specPath.split('\\').pop() : '자동 채우기로 편집 가능한 샷 목록을 만듭니다.'}</span>
+        <span className="dim source-line">{spec ? specPath.split('\\').pop() : '스토리보드 없음'}</span>
       </div>
 
       {(loadError || notice) && <div className="inline-warn"><CircleAlert size={14} />{loadError || notice}</div>}

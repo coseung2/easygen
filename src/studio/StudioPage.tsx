@@ -207,7 +207,7 @@ function StudioWorkspace({ onExit, onExitError }: { onExit: () => Promise<void>;
   const setNotice = React.useCallback((message: string) => useStudioStore.getState().setNotice(message), [])
   const [dropActive, setDropActive] = React.useState(false)
   const panelKey = `modal-gui.studio.panels.${projectId || 'new'}`
-  const [panels, setPanels] = React.useState({ left: true, right: false, timeline: false, storyboard: false })
+  const [panels, setPanels] = React.useState({ left: false, right: false, timeline: false, storyboard: false })
   const fileInputRef = React.useRef<HTMLInputElement | null>(null)
   const canvasRef = React.useRef<HTMLDivElement | null>(null)
   const savingRef = React.useRef(false)
@@ -251,6 +251,10 @@ function StudioWorkspace({ onExit, onExitError }: { onExit: () => Promise<void>;
       return next
     })
   }
+  const selection = useStudioStore((state) => state.selection)
+  React.useEffect(() => {
+    if (selection) updatePanels({ right: true })
+  }, [selection])
   // 연속 추가할 때 노드가 겹치지 않도록 화면 중앙 기준으로 배치 순서를 센다.
   const placementRef = React.useRef(0)
 
@@ -567,7 +571,7 @@ function StudioWorkspace({ onExit, onExitError }: { onExit: () => Promise<void>;
           <StudioCanvas onNotice={setNotice} />
           {doc.nodes.length === 0 && (
             <div className="canvas-empty">
-              <strong>첫 제작 단계를 추가하세요</strong>
+              <strong>빈 캔버스</strong>
               <button className="primary-action" onClick={() => addNodeAtCenter('brief')}>첫 노드 추가</button>
               <button className="secondary-action" onClick={() => void handleImport()}>소재 가져오기</button>
               <button className="secondary-action" onClick={() => useStudioStore.getState().addShot()}>샷 추가</button>

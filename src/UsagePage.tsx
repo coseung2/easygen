@@ -220,7 +220,6 @@ export function UsagePage() {
               <button className="primary-action" type="submit" disabled={busy === 'save'}>{form.id ? '수정 저장' : '계정 추가'}</button>
               <button className="secondary-action" type="button" onClick={() => setForm(null)}>취소</button>
             </div>
-            <p className="acct-form-note">토큰 값은 저장하지 않습니다. 참조 문자열만 기록하고 실제 자격증명은 로컬 Modal 프로필/키체인에 그대로 둡니다.</p>
           </form>
         )}
 
@@ -279,13 +278,6 @@ export function UsagePage() {
           </table>
         </div>
 
-        <div className="usage-note">
-          <CircleAlert size={15} />
-          <span>
-            Modal CLI/SDK는 잔여 크레딧을 제공하지 않습니다. 위 금액은 workspace billing report의 계량 비용이고,
-            추정 잔여는 직접 입력한 할당 크레딧이 있을 때만 표시합니다. 각 계정은 자기 로컬 Modal 프로필로 실행되며 전역 프로필은 바뀌지 않습니다.
-          </span>
-        </div>
       </section>
 
       <section className="panel usage-section">
@@ -303,13 +295,6 @@ export function UsagePage() {
         </div>
         <div className="table-scroll">
           {view === 'jobs' ? <JobsTable rows={rows} /> : <ObjectsTable rows={rows} />}
-        </div>
-        <div className="usage-note">
-          <CircleAlert size={15} />
-          <span>
-            Modal은 비용을 작업이 아니라 앱/구간 단위로 보고합니다. 설치된 Modal 1.5.2에는 호출별 billed cost 필드가 없어
-            작업별 사용액을 만들 수 있는 producer가 아직 없습니다. 기록이 들어오면 그대로 표시되고, 지금은 —입니다.
-          </span>
         </div>
       </section>
     </div>

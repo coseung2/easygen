@@ -125,13 +125,7 @@ export function GeneratePage({ onSubmit, retryDraft }: { onSubmit: (draft: Draft
         </div>
 
         <div className="form-footer">
-          <span className="target-note">
-            {isTauri && !selectedProfile
-              ? '사용량 탭에서 Modal 계정을 추가하거나 사용으로 전환하세요.'
-              : !isTauri
-                ? previewBlock.reason
-              : isMusic ? 'YuE2 · 48 kHz stereo · F:\\modal-gui\\music' : 'H3 L40S · F:\\modal-gui\\h3-clips\\generated'}
-          </span>
+          {!isTauri || !selectedProfile ? <span className="target-note">{!isTauri ? previewBlock.reason : '사용 가능한 계정 없음'}</span> : null}
           <button className="primary-action" disabled={!isTauri || !canSubmit} title={isTauri ? undefined : previewBlock.nextAction}>
             <Play size={16} fill="currentColor" />
             {isMusic ? '음악 생성' : variants > 1 ? variants + '개 생성' : '영상 생성'}
