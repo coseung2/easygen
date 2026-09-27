@@ -1,0 +1,57 @@
+{
+  "id": "local-freeze-cast",
+  "version": "1.0",
+  "status": "candidate",
+  "kind": "video",
+  "engine": "local-python",
+  "label": "프리즈 프레임 캐릭터 인트로",
+  "summary": "영상이 찰칵 멈추며 인물을 스티커로 따내고 예능 등장인물처럼 소개하는 9:16 영상 (1.6 + 3.2×인원 + 3.2초)",
+  "tone": "playful",
+  "inputs": {
+    "name": "required · 주인공 이름",
+    "cast[]": "required · 1–6개: media(영상/사진), freeze_at(영상 초), role, gag, label",
+    "title / subtitle / outro_title / outro_tag": "optional",
+    "palette": "optional · neon | warm | pastel",
+    "cutout_model": "optional · bria-rmbg (비상업) | birefnet-general (MIT)"
+  },
+  "outputs": {
+    "video": "mp4 1080x1920 30fps",
+    "metadata": "<output>.metadata.json"
+  },
+  "schema": "job.schema.json",
+  "runtime": {
+    "python": "lab venv with rembg[cpu]==2.0.67, numpy<2.3, scipy, pillow",
+    "ffmpeg": "8.1.1",
+    "fonts": [
+      "_shared/fonts/BlackHanSans-Regular.ttf (OFL)",
+      "GmarketSansTTFBold",
+      "Pretendard"
+    ],
+    "cutout_models": {
+      "bria-rmbg": "CC BY-NC 4.0",
+      "birefnet-general": "MIT"
+    },
+    "shared": [
+      "_shared/motionkit.py",
+      "_shared/cutout.py",
+      "_shared/sfx.py",
+      "_shared/music_chiptune.py",
+      "_shared/fonts/BlackHanSans-Regular.ttf"
+    ]
+  },
+  "prompts": {
+    "copy": "cast-card-writer@1.0"
+  },
+  "files": {
+    "job.schema.json": "sha256:666929afaf719e681f4c20ce92d4723c6398613efc1aeee6f6f6dbfcb915c6da",
+    "render.py": "sha256:11c7f317e1e1890a9bd0be7dc9ce5e8f003fe6d0dfd5b69e5c36a5f8510d6f9d",
+    "_shared/motionkit.py": "sha256:0e0ba5fc14955cf610b9a6bfc8806ee04368bce9c61873fa4baa9585a7d2c0e8",
+    "_shared/cutout.py": "sha256:f629c7f00967648432ff398565ac15b95d0aab85921f2a38fe9df81a0f234f86",
+    "_shared/sfx.py": "sha256:5c7e885dc6b29d4a0a4b87517878ef58e83e702b3d783f66bd4f1a9da9ce4cd0",
+    "_shared/music_chiptune.py": "sha256:c3daaa4d08b909a1266dcb887d53f90471b014ed6d46c63d37ea1fae00c3a1e0",
+    "_shared/fonts/BlackHanSans-Regular.ttf": "sha256:31960809284026681774a8e52dc19ebcad26cf69b0ad9d560f288296fbb52739"
+  },
+  "origin": "F:\\modal-gui\\lab\\2026-09-28-junyoung-intro (junyoung-freeze-v2.mp4, verdict.md)",
+  "released_at": null,
+  "notes": "Lab 합격 1회. 제5조 §5에 따라 두 번째 합격 전까지 candidate."
+}

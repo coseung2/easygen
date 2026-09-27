@@ -12,6 +12,7 @@ mod studio;
 mod studio_export;
 mod studio_run;
 mod studio_templates;
+mod templates;
 mod usage;
 mod workflows;
 
@@ -83,6 +84,8 @@ fn main() {
             pipeline::render_spec,
             pipeline::build_storyboard,
             pipeline::list_renderers,
+            templates::template_list,
+            templates::template_render,
             studio::studio_list_projects,
             studio::studio_create_project,
             studio::studio_load_project,

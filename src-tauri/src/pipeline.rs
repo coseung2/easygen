@@ -65,7 +65,7 @@ pub(crate) struct StoryboardRequest {
 /// when it finishes, so completion cannot depend on a frontend subscriber:
 /// without this, leaving the studio during a render left the run `running`
 /// until the next app start turned it into a failure.
-fn persist_pipeline_outcome(app: &tauri::AppHandle, event: &Value) {
+pub(crate) fn persist_pipeline_outcome(app: &tauri::AppHandle, event: &Value) {
     let Some(run_id) = event.get("run_id").and_then(Value::as_str) else {
         return;
     };

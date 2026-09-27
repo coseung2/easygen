@@ -1,6 +1,6 @@
 import React, { lazy, Suspense } from 'react'
 import { listenSafely } from './lib/listen'
-import { CheckCircle2, Plus, X, Zap } from 'lucide-react'
+import { CheckCircle2, ChevronLeft, ChevronRight, ListTodo, MonitorPlay, PanelLeft, Plus, Scissors, Settings2, Wand2, Workflow, X, Zap } from 'lucide-react'
 const EditPage = lazy(() => import('./EditPage').then((module) => ({ default: module.EditPage })))
 const ConnectionsPage = lazy(() => import('./pages/ConnectionsPage').then((module) => ({ default: module.ConnectionsPage })))
 const StudioPage = lazy(() => import('./studio/StudioPage').then((module) => ({ default: module.StudioPage })))
@@ -17,18 +17,26 @@ import { applyWorkerEvent, reconcileJobLists } from './ux/stageOne'
 
 export function App() {
   const [page, setPage] = React.useState<Page>('Studio')
+  const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false)
+
   React.useEffect(() => {
     const openUsage = () => { if (window.location.hash === '#usage') setPage('Usage') }
     window.addEventListener('hashchange', openUsage)
     return () => window.removeEventListener('hashchange', openUsage)
   }, [])
+
   const [jobs, setJobs] = React.useState<Job[]>([])
   const [notice, setNotice] = React.useState('')
   const [retryDraft, setRetryDraft] = React.useState<Draft | null>(null)
 
-  // The queue screen is otherwise in-memory only, so a restart would hide the
-  // jobs the database already knows about (including the ones closed as
-  // interrupted). Rows already in memory win, since they are the live ones.
+  // Auto-dismiss toast notice after 4.5s
+  React.useEffect(() => {
+    if (!notice) return
+    const timer = window.setTimeout(() => setNotice(''), 4500)
+    return () => window.clearTimeout(timer)
+  }, [notice])
+
+  // Reconcile and load durable jobs
   React.useEffect(() => {
     if (!isTauri) return
     let cancelled = false
@@ -92,30 +100,49 @@ export function App() {
     setPage('Jobs')
   }
 
+  const runningCount = jobs.filter((job) => job.status === 'RUNNING' || job.status === 'QUEUED').length
+
   return (
     <div className="app-shell">
-      <aside className="sidebar">
+      <aside className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
         <div className="brand-lockup">
-          <div className="brand-mark"><Zap size={18} fill="currentColor" /></div>
+          <div className="brand-mark" title="MODAL GUI"><Zap size={18} fill="currentColor" /></div>
           <div>
             <strong>MODAL GUI</strong>
             <span>H3 / YuE2 STUDIO</span>
           </div>
         </div>
-        <div className="workspace-chip">{isTauri ? '로컬 작업 공간' : '브라우저 미리보기'}</div>
+        <div className="workspace-chip">
+          <span className="online-dot" />
+          {isTauri ? '로컬 작업 공간' : '브라우저 미리보기'}
+        </div>
         <nav className="primary-nav" aria-label="주 메뉴">
           {navItems.map(({ id, label, icon: Icon }) => (
-            <button key={id} className={page === id ? 'nav-item active' : 'nav-item'} aria-label={label} onClick={() => setPage(id)}>
+            <button
+              key={id}
+              className={page === id ? 'nav-item active' : 'nav-item'}
+              aria-label={label}
+              title={sidebarCollapsed ? label : undefined}
+              onClick={() => setPage(id)}
+            >
               <Icon size={17} strokeWidth={1.8} />
               <span>{label}</span>
-              {id === 'Jobs' && jobs.filter((job) => job.status === 'RUNNING' || job.status === 'QUEUED').length > 0 && (
-                <em>{jobs.filter((job) => job.status === 'RUNNING' || job.status === 'QUEUED').length}</em>
+              {id === 'Jobs' && runningCount > 0 && (
+                <em>{runningCount}</em>
               )}
             </button>
           ))}
         </nav>
         <div className="sidebar-bottom">
           {isTauri ? null : <div className="runtime-status"><div><b>읽기 전용 미리보기</b><small>외부 실행과 저장은 Tauri 앱에서 합니다.</small></div></div>}
+          <button
+            className="sidebar-toggle-btn"
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            title={sidebarCollapsed ? '사이드바 펼치기' : '사이드바 접기'}
+            aria-label="사이드바 전환"
+          >
+            {sidebarCollapsed ? <ChevronRight size={14} /> : <><ChevronLeft size={14} /><span>사이드바 접기</span></>}
+          </button>
         </div>
       </aside>
 
@@ -132,7 +159,10 @@ export function App() {
               <h1>{page === 'Generate' ? '새 미디어 만들기' : page === 'Jobs' ? '작업 큐' : page === 'Edit' ? '편집 · 모션그래픽' : page === 'Results' ? '결과물' : page === 'Usage' ? '사용량 리포트' : page === 'Connections' ? '연결 관리' : '설정'}</h1>
             </div>
             <div className="topbar-actions">
-              <span className="system-pill">{isTauri ? '로컬 앱' : '미리보기'}</span>
+              <span className="system-pill">
+                <span className="online-dot" />
+                {isTauri ? '로컬 앱' : '미리보기'}
+              </span>
               <button className="icon-button" title="새 작업" aria-label="새 작업" onClick={() => setPage('Generate')}><Plus size={18} /></button>
             </div>
           </header>

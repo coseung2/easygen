@@ -22,6 +22,7 @@ import { ChatPanel } from './ChatPanel'
 import { useStudioStore } from './store'
 import { browserCapability, confirmProtectedAction } from '../ux/stageOne'
 import { WORKFLOW_STATUS_LABELS, listWorkflows, type WorkflowRow } from '../lib/workflows'
+import { TEMPLATE_STARTERS, listTemplates as listVideoTemplates, templateRef, type TemplateInfo } from '../lib/templates'
 import { listModalProfiles, type ModalProfile } from '../lib/usage'
 import { checkToolCall } from './toolInput'
 import {
@@ -173,6 +174,41 @@ function ProfileSelect({ field, value, onChange }: { field: FieldSpec; value: Co
   )
 }
 
+/** 로컬 영상 템플릿 선택. candidate는 '시험'으로 표시하고, 실행할 수 없는 템플릿은 이유를 보여준다. */
+function TemplateSelect({ field, value, onChange }: { field: FieldSpec; value: ConfigValue; onChange: (value: ConfigValue) => void }) {
+  const [rows, setRows] = React.useState<TemplateInfo[]>([])
+  const [error, setError] = React.useState('')
+
+  React.useEffect(() => {
+    let cancelled = false
+    void listVideoTemplates()
+      .then((list) => { if (!cancelled) setRows(list) })
+      .catch((loadError) => { if (!cancelled) setError(String(loadError)) })
+    return () => { cancelled = true }
+  }, [])
+
+  const current = typeof value === 'string' ? value : ''
+  const selected = rows.find((row) => templateRef(row) === current)
+  return (
+    <label className="field-label">
+      {field.label}
+      <select value={current} onChange={(event) => onChange(event.target.value)}>
+        <option value="">템플릿 선택</option>
+        {rows.map((row) => (
+          <option key={templateRef(row)} value={templateRef(row)} disabled={!row.runnable}>
+            {row.label}{row.status === 'candidate' ? ' (시험)' : ''}
+          </option>
+        ))}
+      </select>
+      {selected && <small className="dim">{selected.summary}</small>}
+      {selected && !selected.runnable && <small className="bad">{selected.unavailableReason}</small>}
+      {current && !selected && rows.length > 0 && <small className="bad">선택한 템플릿을 찾을 수 없습니다.</small>}
+      {!isTauri && <small className="dim">템플릿 목록은 Tauri 앱에서 불러옵니다.</small>}
+      {error && <small className="bad">{error}</small>}
+    </label>
+  )
+}
+
 function WorkflowSelect({ field, value, onChange }: { field: FieldSpec; value: ConfigValue; onChange: (value: ConfigValue) => void }) {
   const [rows, setRows] = React.useState<WorkflowRow[]>([])
   const [error, setError] = React.useState('')
@@ -316,12 +352,29 @@ function NodeInspector({ id, onReveal, onNotice }: { id: string; onReveal: (path
       )}
 
       {spec.fields.map((field) => (
-        <FieldControl
-          key={field.key}
-          field={field}
-          value={node.config[field.key] ?? null}
-          onChange={(value) => setNodeConfig(node.id, field.key, value)}
-        />
+        field.dynamic === 'templates' ? (
+          <TemplateSelect
+            key={field.key}
+            field={field}
+            value={node.config[field.key] ?? null}
+            onChange={(value) => {
+              setNodeConfig(node.id, field.key, value)
+              // 템플릿을 처음 고를 때만 입력 예시를 채운다. 이미 쓴 입력은 덮지 않는다.
+              const current = node.config.job
+              const starter = typeof value === 'string' ? TEMPLATE_STARTERS[value] : undefined
+              if (starter && (typeof current !== 'string' || current.trim() === '')) {
+                setNodeConfig(node.id, 'job', JSON.stringify(starter, null, 2))
+              }
+            }}
+          />
+        ) : (
+          <FieldControl
+            key={field.key}
+            field={field}
+            value={node.config[field.key] ?? null}
+            onChange={(value) => setNodeConfig(node.id, field.key, value)}
+          />
+        )
       ))}
 
       {node.kind === 'tool' && <ToolNodeSection node={node} onNotice={onNotice} />}

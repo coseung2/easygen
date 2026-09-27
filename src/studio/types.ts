@@ -37,6 +37,7 @@ export type NodeKind =
   | 'edit'
   | 'export'
   | 'tool'
+  | 'template'
 
 export type NodeStatus = 'draft' | 'ready' | 'running' | 'done' | 'stale' | 'failed'
 

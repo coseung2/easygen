@@ -8,6 +8,7 @@ import {
   FileImage,
   Film,
   ImagePlus,
+  LayoutTemplate,
   ListChecks,
   Music,
   Palette,
@@ -25,7 +26,7 @@ import type { NodeKind, Port, PortType } from './types'
 export type FieldType = 'text' | 'textarea' | 'number' | 'select' | 'checkbox'
 
 /** 앱 데이터에서 채워지는 선택 목록. 정적 options 대신 쓴다. */
-export type FieldDynamicSource = 'workflows' | 'connections' | 'profiles'
+export type FieldDynamicSource = 'workflows' | 'connections' | 'profiles' | 'templates'
 
 export interface FieldSpec {
   key: string
@@ -523,6 +524,22 @@ export const NODE_SPECS: NodeKindSpec[] = [
     ],
     executionStage: 3,
   },
+  {
+    kind: 'template',
+    label: '영상 템플릿',
+    group: '조립',
+    description: '검증된 로컬 영상 템플릿에 사진·영상과 문구를 넣어 완성 영상을 만듭니다. 이 컴퓨터에서 무료로 렌더합니다.',
+    icon: LayoutTemplate,
+    inputs: [],
+    outputs: [{ id: 'video', label: '완성 영상', type: 'Video' }],
+    contextIn: true,
+    contextOut: false,
+    fields: [
+      { key: 'template', label: '템플릿', type: 'select', dynamic: 'templates' },
+      { key: 'job', label: '템플릿 입력 (JSON)', type: 'textarea', rows: 14, placeholder: '템플릿을 고르면 입력 예시가 채워집니다.' },
+    ],
+    executionStage: 1,
+  },
 ]
 
 export const NODE_SPEC_BY_KIND: Record<NodeKind, NodeKindSpec> = NODE_SPECS.reduce(
@@ -541,7 +558,7 @@ export function nodeSpec(kind: NodeKind): NodeKindSpec {
 
 // 실행 연결이 실제로 동작하는 노드 종류.
 // 영상·Comfy = Modal H3, 음악·음성 = YuE2, 편집·합성 = 로컬 FFmpeg, 도구 실행 = MCP.
-const RUNNABLE_KINDS = new Set<NodeKind>(['video', 'comfy', 'audio', 'edit', 'tool', 'typo', 'motion'])
+const RUNNABLE_KINDS = new Set<NodeKind>(['video', 'comfy', 'audio', 'edit', 'tool', 'typo', 'motion', 'template'])
 
 export function isRunnable(kind: NodeKind): boolean {
   return RUNNABLE_KINDS.has(kind)

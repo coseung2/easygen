@@ -1,19 +1,18 @@
 import React from 'react'
 import { convertFileSrc } from '@tauri-apps/api/core'
-import { Film } from 'lucide-react'
+import { AudioLines, FileText, Film, Video } from 'lucide-react'
 import { formatBytes, makeThumbnail } from './lib/pipeline'
 import type { MediaEntry } from './lib/pipeline'
 import { isTauri } from './lib/tauri'
 
-/** Result grid: clicking a card previews that file directly, so the user never
- * has to pick from a path dropdown. */
+/** Result grid: clicking a card previews that file directly */
 export function ThumbGrid({ entries, selected, onSelect }: {
   entries: MediaEntry[]
   selected: string
   onSelect: (path: string) => void
 }) {
   if (entries.length === 0) {
-    return <p className="dim">결과물 없음</p>
+    return <p className="dim" style={{ textAlign: 'center', padding: '32px 0' }}>표시할 결과물 파일이 없습니다.</p>
   }
   return (
     <div className="thumb-grid">
@@ -47,6 +46,10 @@ function ThumbCard({ entry, active, onSelect }: {
     return () => { alive = false }
   }, [entry.path])
 
+  const ext = entry.name.split('.').pop()?.toUpperCase() || 'FILE'
+  const isAudio = ['WAV', 'MP3', 'OGG', 'FLAC', 'AAC'].includes(ext)
+  const isVideo = ['MP4', 'MOV', 'WEBM', 'MKV', 'AVI'].includes(ext)
+
   return (
     <button type="button" className={'thumb-card' + (active ? ' active' : '')} onClick={() => onSelect(entry.path)}>
       <span className="thumb-frame">
@@ -60,12 +63,19 @@ function ThumbCard({ entry, active, onSelect }: {
             playsInline
             onError={() => setBroken(true)}
           />
+        ) : isAudio ? (
+          <AudioLines size={22} style={{ color: '#7ec9ff' }} />
+        ) : isVideo ? (
+          <Film size={22} style={{ color: '#a7ef75' }} />
         ) : (
-          <Film size={18} />
+          <FileText size={22} style={{ color: '#f1c56c' }} />
         )}
       </span>
       <span className="thumb-name" title={entry.path}>{entry.name}</span>
-      <span className="thumb-meta">{formatBytes(entry.size_bytes)}</span>
+      <span className="thumb-meta" style={{ display: 'flex', justifyContent: 'space-between' }}>
+        <span>{formatBytes(entry.size_bytes)}</span>
+        <span style={{ color: isVideo ? '#a7ef75' : isAudio ? '#7ec9ff' : '#9aa8ba', fontWeight: 700 }}>{ext}</span>
+      </span>
     </button>
   )
 }

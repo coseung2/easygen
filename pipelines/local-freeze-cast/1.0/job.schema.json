@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "local-freeze-cast@1.0/job",
+  "type": "object",
+  "required": ["name", "output", "cast"],
+  "properties": {
+    "name": { "type": "string", "minLength": 1, "maxLength": 12 },
+    "output": { "type": "string" },
+    "palette": { "enum": ["neon", "warm", "pastel"] },
+    "cutout_model": { "enum": ["bria-rmbg", "birefnet-general", "isnet-general-use"] },
+    "badge": { "type": "string" },
+    "title": { "type": "array", "items": { "type": "string" }, "maxItems": 2 },
+    "subtitle": { "type": "string" },
+    "outro_title": { "type": "string" },
+    "outro_tag": { "type": "string" },
+    "cast": {
+      "type": "array", "minItems": 1, "maxItems": 6,
+      "items": {
+        "type": "object", "required": ["media", "role"],
+        "properties": {
+          "media": { "type": "string" },
+          "freeze_at": { "type": "number", "minimum": 0 },
+          "label": { "type": "string" },
+          "role": { "type": "string" },
+          "gag": { "type": "string" }
+        }
+      }
+    }
+  }
+}

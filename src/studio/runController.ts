@@ -24,6 +24,7 @@ import {
 } from '../lib/motion'
 import { isTauri } from '../lib/tauri'
 import { listWorkflows } from '../lib/workflows'
+import { listTemplates, renderTemplate, templateRef } from '../lib/templates'
 import { isRunnable, nodeSpec } from './catalog'
 import { cancelNodeRun, finishNodeRun, kindFromExtension, listNodeRuns, probePath, retryRunDownload, startLocalRun, startNodeRun } from './lib'
 import { callConnectionTool, listConnectionTools } from '../lib/connections'
@@ -775,6 +776,74 @@ export function toolErrorMessage(result: unknown): string {
   return ''
 }
 
+/**
+ * 영상 템플릿 노드 실행. 템플릿(pipelines/<id>/<ver>)은 입력 JSON만 받아 이 컴퓨터에서
+ * 렌더하고, 진행 이벤트는 다른 로컬 렌더와 같은 pipeline-event로 들어온다.
+ */
+async function startTemplateRun(node: StudioNode): Promise<StartResult> {
+  const ref = configText(node, 'template')
+  if (!ref) return { ok: false, reason: '템플릿을 고르세요.' }
+  const templates = await listTemplates()
+  const template = templates.find((item) => templateRef(item) === ref)
+  if (!template) return { ok: false, reason: `템플릿을 찾을 수 없습니다: ${ref}` }
+  if (!template.runnable) return { ok: false, reason: template.unavailableReason ?? '이 템플릿은 지금 실행할 수 없습니다.' }
+
+  let job: Record<string, unknown>
+  try {
+    const parsed: unknown = JSON.parse(configText(node, 'job') || '{}')
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('not an object')
+    job = parsed as Record<string, unknown>
+  } catch {
+    return { ok: false, reason: '템플릿 입력을 JSON 객체로 해석하지 못했습니다.' }
+  }
+  const missing = missingMedia(job)
+  if (missing.length > 0) {
+    return { ok: false, reason: `소재 경로를 채우세요: ${missing.slice(0, 3).join(', ')}${missing.length > 3 ? ' 외' : ''}` }
+  }
+
+  const state = useStudioStore.getState()
+  let run: StudioRunRow
+  try {
+    run = await startLocalRun({
+      projectId: state.projectId,
+      nodeId: node.id,
+      nodeTitle: node.title,
+      tool: `template:${ref}`,
+      inputJson: JSON.stringify({ template: ref, job }),
+    })
+  } catch (error) {
+    return { ok: false, reason: String(error) }
+  }
+  const outputPath = studioArtifactPath(state.projectId, `${run.id}.mp4`)
+  try {
+    localRuns.set(run.id, { nodeId: node.id, outputPath })
+    await renderTemplate({ run_id: run.id, template: ref, job, output: outputPath })
+  } catch (error) {
+    localRuns.delete(run.id)
+    void finishNodeRun(run.id, 'failed', null, String(error)).catch(() => undefined)
+    useStudioStore.getState().upsertRun({ ...run, status: 'failed', errorMessage: String(error) })
+    useStudioStore.getState().setNodeStatus(node.id, 'failed')
+    return { ok: false, reason: String(error) }
+  }
+  const store = useStudioStore.getState()
+  store.upsertRun(run)
+  store.setNodeStatus(node.id, 'running')
+  return { ok: true, reason: `${template.label} 렌더를 시작했습니다. 인물 따내기 때문에 첫 실행은 몇 분 걸릴 수 있습니다.` }
+}
+
+/** 입력 JSON에서 비어 있는 media 경로를 찾는다. 빈 경로로 렌더를 시작하지 않기 위해서다. */
+export function missingMedia(value: unknown, path = ''): string[] {
+  if (Array.isArray(value)) return value.flatMap((item, index) => missingMedia(item, `${path}[${index}]`))
+  if (!value || typeof value !== 'object') return []
+  const found: string[] = []
+  for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
+    const here = path ? `${path}.${key}` : key
+    if (key === 'media' && (typeof item !== 'string' || item.trim() === '')) found.push(here)
+    else found.push(...missingMedia(item, here))
+  }
+  return found
+}
+
 export async function startStudioRun(nodeId: string): Promise<StartResult> {
   const node = useStudioStore.getState().doc.nodes.find((item) => item.id === nodeId)
   if (!node) return { ok: false, reason: '노드를 찾을 수 없습니다.' }
@@ -800,6 +869,7 @@ export async function startStudioRun(nodeId: string): Promise<StartResult> {
   if (node.kind === 'typo') return startGraphicsRun(node, 'typo')
   if (node.kind === 'motion') return startGraphicsRun(node, 'motion')
   if (node.kind === 'tool') return startToolRun(node)
+  if (node.kind === 'template') return startTemplateRun(node)
   return { ok: false, reason: `${spec.label} 노드의 실행은 아직 연결되지 않았습니다.` }
 }
 
