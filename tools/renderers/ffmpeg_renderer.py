@@ -25,6 +25,7 @@ import json
 import shutil
 import subprocess
 from pathlib import Path
+from typing import Iterable
 
 from .base import Capability, Emit, PluginInfo, RenderRequest
 
@@ -38,11 +39,99 @@ def escape_text(value: str) -> str:
     return value.replace("\\", "\\\\").replace(":", "\\:").replace("'", "\\'").replace("%", "\\%")
 
 
-def _font_path() -> str:
-    for candidate in (r"C:/Windows/Fonts/arialbd.ttf", r"C:/Windows/Fonts/segoeuib.ttf"):
-        if Path(candidate).exists():
-            return candidate
-    return r"C:/Windows/Fonts/arial.ttf"
+def filter_font_path(path: str) -> str:
+    """A font path as drawtext needs it in this build.
+
+    Two traps, both verified against ffmpeg 8.1.1 on Windows: a backslash path
+    inside `fontfile='...'` crashes the process with an access violation
+    (0xC0000005) instead of reporting an error, and the drive colon still has to
+    be escaped for the filter parser. Forward slashes avoid both.
+    """
+    return path.replace("\\", "/").replace(":", chr(92) + ":")
+
+
+WINDOWS_FONTS = Path(r"C:/Windows/Fonts")
+HANGUL_RANGES = ((0xAC00, 0xD7A3), (0x1100, 0x11FF), (0x3130, 0x318F))
+KNOWN_FONTS = {
+    "pretendard": ("Pretendard-Bold.ttf",),
+    "pretendardbold": ("Pretendard-Bold.ttf",),
+    "맑은고딕": ("malgunbd.ttf", "malgun.ttf"),
+    "malgungothic": ("malgunbd.ttf", "malgun.ttf"),
+    "malgun": ("malgunbd.ttf", "malgun.ttf"),
+    "나눔고딕": ("NanumGothicBold.ttf", "NanumGothic.ttf"),
+    "nanumgothic": ("NanumGothicBold.ttf", "NanumGothic.ttf"),
+    "arial": ("arialbd.ttf",),
+    "segoeui": ("segoeuib.ttf",),
+}
+HANGUL_FONT_NAMES = {
+    "pretendard",
+    "pretendardbold",
+    "맑은고딕",
+    "malgungothic",
+    "malgun",
+    "나눔고딕",
+    "nanumgothic",
+    "gulim",
+    "batang",
+}
+
+
+def _normalise_font_name(value: str) -> str:
+    return "".join(value.casefold().split())
+
+
+def _contains_hangul(text: str) -> bool:
+    return any(start <= ord(character) <= end for character in text for start, end in HANGUL_RANGES)
+
+
+def _font_is_hangul_capable(requested: str | None, path: str) -> bool:
+    name = _normalise_font_name(requested or "")
+    stem = _normalise_font_name(Path(path).stem)
+    return name in HANGUL_FONT_NAMES or any(token in stem for token in ("malgun", "nanumgothic", "pretendard", "gulim", "batang"))
+
+
+def _existing(paths: Iterable[Path]) -> str | None:
+    for path in paths:
+        if path.is_file():
+            return str(path)
+    return None
+
+
+def _default_non_hangul_font() -> str:
+    return _existing((WINDOWS_FONTS / "arialbd.ttf", WINDOWS_FONTS / "segoeuib.ttf")) or str(WINDOWS_FONTS / "arial.ttf")
+
+
+def _resolve_font(cue, request: RenderRequest) -> tuple[str, str | None]:
+    requested = cue.font
+    key = _normalise_font_name(requested) if requested else ""
+    custom = None
+    if requested:
+        for name, path in request.fonts.items():
+            if _normalise_font_name(name) == key:
+                custom = Path(path)
+                break
+
+    resolved = str(custom) if custom and custom.is_file() else None
+    if resolved is None and key in KNOWN_FONTS:
+        resolved = _existing(WINDOWS_FONTS / filename for filename in KNOWN_FONTS[key])
+
+    hangul = _contains_hangul(cue.text)
+    if hangul:
+        if resolved and _font_is_hangul_capable(requested, resolved):
+            return resolved, None
+        fallback = _existing(
+            WINDOWS_FONTS / filename
+            for filename in ("malgunbd.ttf", "malgun.ttf", "NanumGothicBold.ttf", "NanumGothic.ttf")
+        )
+        if fallback:
+            return fallback, requested
+        return "", requested
+
+    if resolved:
+        return resolved, None
+    if requested:
+        return _default_non_hangul_font(), requested
+    return _default_non_hangul_font(), None
 
 
 def _beat_kick(beats: list[float], window: float = 0.18, time_var: str = "t") -> str:
@@ -107,7 +196,7 @@ class FfmpegRenderer:
             notes="drawtext/drawbox 기반. 타이포는 단순한 sin 흔들림과 페이드까지만 가능합니다.",
         )
 
-    def build_filter(self, request: RenderRequest, graphics: bool) -> str:
+    def build_filter(self, request: RenderRequest, graphics: bool, fonts: list[str] | None = None, emit: Emit | None = None) -> str:
         parts: list[str] = []
         width, height = request.width, request.height
         for index, seconds in enumerate(request.shot_durations):
@@ -132,7 +221,7 @@ class FfmpegRenderer:
             return ";".join(parts)
 
         kick = _beat_kick(request.beats)
-        font = _font_path().replace(":", chr(92) + ":")
+        resolved_fonts = fonts if fonts is not None else self._resolve_fonts(request, emit)
         current = "[base]"
         step = 0
 
@@ -160,13 +249,34 @@ class FfmpegRenderer:
             current = out
 
         for index, cue in enumerate(request.cues):
-            current = self._draw_cue(parts, current, index, cue, request, font, kick)
+            current = self._draw_cue(parts, current, index, cue, request, filter_font_path(resolved_fonts[index]), kick)
 
         parts.append(
             f"{current}drawbox=x=0:y=0:w='{width}*(mod(t*1.8\\,1))':h=8:"
             "color=0xF2A900@0.9:t=fill[video]"
         )
         return ";".join(parts)
+
+    def _resolve_fonts(self, request: RenderRequest, emit: Emit | None = None) -> list[str]:
+        resolved: list[str] = []
+        for cue in request.cues:
+            path, substituted_from = _resolve_font(cue, request)
+            if not path:
+                requested = cue.font or "기본 글꼴"
+                message = f"한국어를 표시할 수 있는 글꼴을 찾지 못했습니다: {requested}"
+                if emit:
+                    emit("failed", message=message)
+                raise SystemExit(3)
+            if substituted_from:
+                if emit:
+                    emit(
+                        "font_missing",
+                        requested=substituted_from,
+                        substituted=path,
+                        reason="요청한 글꼴을 사용할 수 없어 대체 글꼴을 사용합니다.",
+                    )
+            resolved.append(path)
+        return resolved
 
     def _draw_cue(
         self,
@@ -240,6 +350,7 @@ class FfmpegRenderer:
 
     def render(self, request: RenderRequest, emit: Emit) -> Path:
         graphics = bool(request.cues)
+        resolved_fonts = self._resolve_fonts(request, emit)
         emit(
             "render_started",
             mode="graphics" if graphics else "base",
@@ -254,7 +365,7 @@ class FfmpegRenderer:
         # the Windows command-line limit, so pass it as a script file.
         graph_path = request.output.with_suffix(".filter.txt")
         graph_path.parent.mkdir(parents=True, exist_ok=True)
-        graph_path.write_text(self.build_filter(request, graphics), encoding="utf-8")
+        graph_path.write_text(self.build_filter(request, graphics, resolved_fonts), encoding="utf-8")
         command.extend([
             "-stream_loop", "-1", "-i", str(request.audio),
             "-filter_complex_script", str(graph_path),
@@ -285,8 +396,8 @@ class FfmpegRenderer:
                 "clips_used": [str(path) for path in request.clips],
                 "beats_used": request.beats,
                 "text_cues": [
-                    {"start": cue.start, "end": cue.end, "text": cue.text, "size": cue.size}
-                    for cue in request.cues
+                    {"start": cue.start, "end": cue.end, "text": cue.text, "size": cue.size, "font": font}
+                    for cue, font in zip(request.cues, resolved_fonts)
                 ],
                 "audio": str(request.audio),
             }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

@@ -11,14 +11,18 @@ from __future__ import annotations
 import json
 import os
 import re
+import sys
 import tempfile
 import unittest
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from tools.renderers import RenderRequest, TextCue, all_plugins, describe_all, get_plugin
 from tools.renderers.autograph_renderer import AutographRenderer, timecode
 from tools.renderers.cavalry_renderer import CavalryRenderer
 from tools.renderers.ffmpeg_renderer import FfmpegRenderer
+from tools.renderers.ae_renderer import AeRenderer
 
 
 def make_request(output: Path) -> RenderRequest:
@@ -122,6 +126,71 @@ class FfmpegFilterTest(unittest.TestCase):
         self.assertLess(len(graph), 32000, "graph must stay under the argv limit")
 
 
+class FfmpegTypographyTest(unittest.TestCase):
+    def _with_fonts(self, names: list[str]):
+        folder = tempfile.TemporaryDirectory()
+        root = Path(folder.name)
+        for name in names:
+            (root / name).write_bytes(b"font")
+        module = __import__("tools.renderers.ffmpeg_renderer", fromlist=["WINDOWS_FONTS"])
+        original = module.WINDOWS_FONTS
+        module.WINDOWS_FONTS = root
+        self.addCleanup(setattr, module, "WINDOWS_FONTS", original)
+        self.addCleanup(folder.cleanup)
+
+    def test_hangul_text_picks_a_hangul_capable_font(self) -> None:
+        self._with_fonts(["malgunbd.ttf", "arialbd.ttf"])
+        request = make_request(Path("C:/out/korean.mp4"))
+        request.cues = [TextCue(0, 2, "한국어 타이포", 64)]
+        self.assertTrue(FfmpegRenderer()._resolve_fonts(request)[0].endswith("malgunbd.ttf"))
+
+    def test_missing_requested_font_emits_font_missing(self) -> None:
+        self._with_fonts(["arialbd.ttf"])
+        request = make_request(Path("C:/out/missing-font.mp4"))
+        request.cues = [TextCue(0, 2, "English", 64, "No Such Font")]
+        events: list[tuple[str, dict]] = []
+        FfmpegRenderer()._resolve_fonts(request, lambda event, **fields: events.append((event, fields)))
+        self.assertEqual(events[0][0], "font_missing")
+        self.assertEqual(events[0][1]["requested"], "No Such Font")
+
+    def test_non_hangul_cue_keeps_arial(self) -> None:
+        self._with_fonts(["arialbd.ttf", "segoeuib.ttf"])
+        request = make_request(Path("C:/out/english.mp4"))
+        request.cues = [TextCue(0, 2, "English", 64)]
+        self.assertTrue(FfmpegRenderer()._resolve_fonts(request)[0].endswith("arialbd.ttf"))
+
+    def test_pretendard_bold_resolves_like_the_export_check(self) -> None:
+        # Rust의 내보내기 글꼴 판정과 같은 이름을 Python도 알아야 한다.
+        self._with_fonts(["Pretendard-Bold.ttf"])
+        request = make_request(Path("C:/out/korean.mp4"))
+        request.cues = [TextCue(0, 2, "한국어", 64, "Pretendard Bold")]
+        events: list[tuple[str, dict]] = []
+        fonts = FfmpegRenderer()._resolve_fonts(request, lambda event, **fields: events.append((event, fields)))
+        self.assertTrue(fonts[0].endswith("Pretendard-Bold.ttf"))
+        self.assertEqual(events, [])
+
+    def test_korean_drawtext_references_the_hangul_font(self) -> None:
+        self._with_fonts(["malgun.ttf", "arialbd.ttf"])
+        request = make_request(Path("C:/out/korean.mp4"))
+        request.cues = [TextCue(0, 2, "한국어", 64)]
+        graph = FfmpegRenderer().build_filter(request, graphics=True)
+        self.assertIn("malgun.ttf", graph)
+
+    def test_font_path_in_the_graph_uses_forward_slashes(self) -> None:
+        # ffmpeg 8.1.1 on Windows dies with 0xC0000005 on a backslash fontfile
+        # path inside the filter script, so the graph must never carry one.
+        self._with_fonts(["malgunbd.ttf"])
+        request = make_request(Path("C:/out/korean.mp4"))
+        request.cues = [TextCue(0, 2, "한국어", 64)]
+        graph = FfmpegRenderer().build_filter(request, graphics=True)
+        fontfile = re.search(r"fontfile='([^']+)'", graph)
+        self.assertIsNotNone(fontfile)
+        value = fontfile.group(1)
+        self.assertNotIn("\\W", value)
+        self.assertIn("/", value)
+        self.assertTrue(value.startswith("C\\:"))
+
+
 class AutographSidecarTest(unittest.TestCase):
     def test_timecode_matches_autograph_range_format(self) -> None:
         # `AutographRenderer.exe --help` documents range=H:MM:SS:FF;H:MM:SS:FF
@@ -202,6 +271,76 @@ class CavalryHandoffTest(unittest.TestCase):
             script = result.read_text(encoding="utf-8")
             self.assertIn("addRenderQueueItem", script)
             self.assertIn(payload_path.as_posix(), script)
+
+
+class AeHandoffTest(unittest.TestCase):
+    def test_describe_reports_honest_availability(self) -> None:
+        info = AeRenderer().describe()
+        self.assertIsInstance(info.available, bool)
+        if info.available:
+            self.assertTrue(info.executable)
+        else:
+            self.assertTrue(info.unavailable_reason)
+
+    def test_writes_motion_json_and_extend_script(self) -> None:
+        events: list[tuple[str, dict]] = []
+
+        def emit(event: str, **fields: object) -> None:
+            events.append((event, dict(fields)))
+
+        with tempfile.TemporaryDirectory() as folder:
+            output = Path(folder) / "out.mp4"
+            request = make_request(output)
+            request.cues = [TextCue(1.0, 3.0, "한국어 자막", 72, "맑은 고딕")]
+            result = AeRenderer().render(request, emit)
+            motion_path = output.with_suffix(".motion.json")
+            self.assertEqual(result, output.with_suffix(".ae.jsx"))
+            self.assertTrue(motion_path.exists())
+            self.assertTrue(result.exists())
+            payload = json.loads(motion_path.read_text(encoding="utf-8"))
+            self.assertEqual(payload["durationTicks"], round(request.duration * 24000))
+            self.assertEqual([layer["type"] for layer in payload["layers"]], ["video"] * 3 + ["text"])
+            self.assertEqual(payload["layers"][-1]["startTick"], 24000)
+            self.assertEqual(payload["layers"][-1]["endTick"], 72000)
+            script = result.read_text(encoding="utf-8")
+            self.assertIn("한국어 자막", script)
+            self.assertIn(json.dumps(str(motion_path.resolve()), ensure_ascii=False), script)
+            self.assertIn("app.project.save", script)
+            # The handoff must not modify whatever project the user already has open.
+            self.assertIn("app.newProject()", script)
+            self.assertIn("confirm(", script)
+            # Unattended mode is opt-in: only the instance the app launches
+            # itself writes a log and quits, and it still refuses to touch a
+            # project that is already open.
+            self.assertIn("MODAL_GUI_AE_QUIET", script)
+            self.assertIn(".ae.log", script)
+            self.assertIn("app.quit()", script)
+            self.assertIn("이미 다른 프로젝트가 열려 있습니다", script)
+            # A non-empty untitled project is still the user's work.
+            self.assertIn("app.project.numItems > 0", script)
+            self.assertIn("제목 없는 프로젝트", script)
+            # Only an empty untitled instance is ours to close, and a failed
+            # read or a missing source must not be reported as completion.
+            self.assertIn("!app.project.file && app.project.numItems === 0", script)
+            self.assertIn("Motion JSON을 읽지 못했습니다", script)
+            self.assertIn("누락 소재", script)
+            self.assertIn("찾지 못해 프로젝트가 불완전합니다", script)
+            self.assertNotIn("render_completed", [name for name, _ in events])
+
+    def test_hangul_text_without_a_font_names_a_korean_font(self) -> None:
+        # A text layer with no font keeps the AE default, which is not guaranteed
+        # to carry Hangul glyphs; the handoff must name the Korean font instead.
+        with tempfile.TemporaryDirectory() as folder:
+            output = Path(folder) / "out.mp4"
+            request = make_request(output)
+            request.cues = [
+                TextCue(1.0, 3.0, "한국어 자막", 72),
+                TextCue(3.0, 5.0, "Latin only", 72),
+            ]
+            AeRenderer().render(request, lambda *_, **__: None)
+            payload = json.loads(output.with_suffix(".motion.json").read_text(encoding="utf-8"))
+            fonts = [layer["font"] for layer in payload["layers"] if layer["type"] == "text"]
+            self.assertEqual(fonts, ["Malgun Gothic", None])
 
 
 CAVALRY_METADATA = Path(

@@ -195,7 +195,7 @@ def command_render(args: argparse.Namespace) -> None:
         emit("failed", message=str(error))
         raise SystemExit(2) from error
     info = plugin.describe()
-    if not info.available:
+    if not info.available and plugin.execution != "project_handoff":
         emit("failed", message=info.unavailable_reason or f"{info.name}을 사용할 수 없습니다.")
         raise SystemExit(3)
 
@@ -236,6 +236,7 @@ def command_render(args: argparse.Namespace) -> None:
                 end=float(cue["end"]),
                 text=str(cue["text"]),
                 size=int(cue.get("size", 64)),
+                font=cue.get("font"),
             )
             for cue in cues
         ],
@@ -267,10 +268,13 @@ def command_plugins(_: argparse.Namespace) -> None:
 
 
 def cue_dicts(cues: list[TextCue]) -> list[dict]:
-    return [
-        {"start": cue.start, "end": cue.end, "text": cue.text, "size": cue.size}
-        for cue in cues
-    ]
+    result = []
+    for cue in cues:
+        item = {"start": cue.start, "end": cue.end, "text": cue.text, "size": cue.size}
+        if cue.font is not None:
+            item["font"] = cue.font
+        result.append(item)
+    return result
 
 
 def cues_from(raw: object, fallback: list[dict]) -> list[dict]:
@@ -279,15 +283,18 @@ def cues_from(raw: object, fallback: list[dict]) -> list[dict]:
         raw = raw.get("cues")
     if not isinstance(raw, list) or not raw:
         return fallback
-    return [
-        {
+    result = []
+    for cue in raw:
+        item = {
             "start": float(cue["start"]),
             "end": float(cue["end"]),
             "text": str(cue["text"]),
             "size": int(cue.get("size", 64)),
         }
-        for cue in raw
-    ]
+        if cue.get("font") is not None:
+            item["font"] = str(cue["font"])
+        result.append(item)
+    return result
 
 
 def detect_beats_for(audio: Path, duration: float) -> list[float]:
@@ -380,7 +387,7 @@ def command_edit(args: argparse.Namespace) -> None:
         emit("failed", message=str(error))
         raise SystemExit(2) from error
     info = plugin.describe()
-    if not info.available:
+    if not info.available and plugin.execution != "project_handoff":
         emit("failed", message=info.unavailable_reason or f"{info.name}을 사용할 수 없습니다.")
         raise SystemExit(3)
 
@@ -397,13 +404,14 @@ def command_edit(args: argparse.Namespace) -> None:
         shot_durations=durations,
         clip_starts=starts,
         beats=beats,
-        cues=[TextCue(start=float(c["start"]), end=float(c["end"]), text=str(c["text"]), size=int(c.get("size", 64))) for c in cues],
+        cues=[TextCue(start=float(c["start"]), end=float(c["end"]), text=str(c["text"]), size=int(c.get("size", 64)), font=c.get("font")) for c in cues],
         duration=duration,
         fps=int(spec.get("fps", 24)),
         width=int(spec.get("width", 1920)),
         height=int(spec.get("height", 1080)),
         metadata_path=args.metadata,
         options=options,
+        fonts={str(name): str(path) for name, path in spec.get("fonts", {}).items()},
     )
     result = plugin.render(request, emit)
 

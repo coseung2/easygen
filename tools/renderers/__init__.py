@@ -20,12 +20,14 @@ from .base import (
     stdout_emitter,
 )
 from .cavalry_renderer import CavalryRenderer
+from .ae_renderer import AeRenderer
 from .ffmpeg_renderer import FfmpegRenderer
 
 _PLUGINS: list[RendererPlugin] = [
     FfmpegRenderer(),
     AutographRenderer(),
     CavalryRenderer(),
+    AeRenderer(),
 ]
 
 

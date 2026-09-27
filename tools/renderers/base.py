@@ -30,6 +30,7 @@ class TextCue:
     end: float
     text: str
     size: int = 64
+    font: str | None = None
 
 
 @dataclass
@@ -51,6 +52,7 @@ class RenderRequest:
     fps: int = 24
     metadata_path: Path | None = None
     options: dict = field(default_factory=dict)
+    fonts: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
