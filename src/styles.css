@@ -10,7 +10,11 @@
 }
 
 * { box-sizing: border-box; }
-body { margin: 0; min-width: 1050px; min-height: 100vh; background: #0b0e13; }
+body { margin: 0; min-width: 900px; min-height: 100vh; background: #0b0e13; }
+:focus-visible { outline: 2px solid #a7ef75; outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
 button, input, textarea, select { font: inherit; }
 button { border: 0; cursor: pointer; }
 button:disabled { cursor: not-allowed; opacity: .48; }
@@ -18,6 +22,14 @@ code, .eyebrow, .section-kicker, .workspace-chip, .sidebar-version, .system-pill
 
 .app-shell { display: flex; min-height: 100vh; background: radial-gradient(circle at 72% -8%, #1b2634 0, transparent 34%), #0b0e13; }
 .sidebar { width: 232px; min-height: 100vh; border-right: 1px solid #222a36; background: rgba(14, 18, 25, .92); padding: 27px 15px 18px; display: flex; flex-direction: column; }
+.nav-item span { position: static; }
+@media (max-width: 1049px) {
+  .sidebar { width: 76px; }
+  .brand-lockup div, .workspace-chip, .sidebar-bottom { display: none; }
+  .nav-item span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .workspace, .workspace.studio-mode { width: calc(100vw - 76px) !important; }
+  .workspace:not(.studio-mode) { padding: 24px; }
+}
 .brand-lockup { display: flex; align-items: center; gap: 11px; padding: 0 10px 26px; }
 .brand-mark { width: 33px; height: 33px; display: grid; place-items: center; color: #10150e; background: #a7ef75; border-radius: 10px; box-shadow: 0 0 22px rgba(167, 239, 117, .18); }
 .brand-lockup strong { display: block; font-size: 13px; letter-spacing: .08em; }

@@ -105,7 +105,7 @@ export function App() {
         <div className="workspace-chip">{isTauri ? '로컬 작업 공간' : '브라우저 미리보기'}</div>
         <nav className="primary-nav" aria-label="주 메뉴">
           {navItems.map(({ id, label, icon: Icon }) => (
-            <button key={id} className={page === id ? 'nav-item active' : 'nav-item'} onClick={() => setPage(id)}>
+            <button key={id} className={page === id ? 'nav-item active' : 'nav-item'} aria-label={label} onClick={() => setPage(id)}>
               <Icon size={17} strokeWidth={1.8} />
               <span>{label}</span>
               {id === 'Jobs' && jobs.filter((job) => job.status === 'RUNNING' || job.status === 'QUEUED').length > 0 && (
