@@ -21,6 +21,15 @@
         "tone": "playful",
         "path": "local-launch-spoof/1.0"
       }
+    },
+    "h3-refvideo": {
+      "1.0": {
+        "status": "candidate",
+        "label": "3D motion reference",
+        "engine": "modal-comfyui",
+        "kind": "video",
+        "path": "h3-refvideo/1.0"
+      }
     }
   },
   "prompts": {

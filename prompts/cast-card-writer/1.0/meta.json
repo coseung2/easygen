@@ -1,0 +1,26 @@
+{
+  "id": "cast-card-writer",
+  "version": "1.0",
+  "status": "candidate",
+  "inputs": {
+    "captions": "Text",
+    "records": "Json",
+    "user_traits": "Text"
+  },
+  "output": {
+    "type": "Json",
+    "schema": "schema.json"
+  },
+  "model": {
+    "provider": "chatgpt-oauth",
+    "name": null,
+    "temperature": 0.5
+  },
+  "reads": [],
+  "files": {
+    "schema.json": "sha256:9c058022040d7b3b5e589b2df22e3618db3ce0a46093e059087486a41f5dc215",
+    "system.md": "sha256:518321b3c5c9d17fe8ff3846c729a277f0cf7d76a2c93d08c4f7abfe59bb89cf"
+  },
+  "origin": "F:\\modal-gui\\lab\\2026-09-28-junyoung-intro (steps/brief.md)",
+  "released_at": null
+}
