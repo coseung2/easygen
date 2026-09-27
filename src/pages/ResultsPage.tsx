@@ -31,8 +31,9 @@ export function ResultsPage() {
         <div className="preview-wrap">
           <video className="preview-video" src={isTauri ? convertFileSrc(preview) : undefined} controls />
           <div className="preview-meta">
-            <code>{preview}</code>
-            <button className="link-button" onClick={() => void revealInExplorer(preview)}>탐색기에서 보기</button>
+            <strong>{preview.split(/[\\/]/).pop()}</strong>
+            <span>상태: 결과 파일 확인 · 생성 시각: 파일 메타데이터 미확인</span>
+            <details><summary>파일 상세</summary><code>{preview}</code><button className="link-button" onClick={() => void revealInExplorer(preview)}>탐색기에서 보기</button></details>
           </div>
         </div>
       )}

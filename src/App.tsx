@@ -24,6 +24,7 @@ export function App() {
   }, [])
   const [jobs, setJobs] = React.useState<Job[]>([])
   const [notice, setNotice] = React.useState('')
+  const [retryDraft, setRetryDraft] = React.useState<Draft | null>(null)
 
   // The queue screen is otherwise in-memory only, so a restart would hide the
   // jobs the database already knows about (including the ones closed as
@@ -76,7 +77,7 @@ export function App() {
         const job: Job = {
           id, kind: draft.kind, profileId: draft.profileId, status: 'QUEUED', stage: 'JOB_CREATED',
           prompt: payload.prompt, inputPath: draft.inputPath, duration: payload.duration, resolution: payload.resolution,
-          width: draft.width, height: draft.height, seed: payload.seed, createdAt: new Date().toISOString(), logs: ['작업이 큐에 등록되었습니다.'],
+          width: draft.width, height: draft.height, seed: payload.seed, style: draft.style, lyrics: draft.lyrics, createdAt: new Date().toISOString(), logs: ['작업이 큐에 등록되었습니다.'],
         }
         await call('create_job', { job: payload })
         setJobs((current) => [job, ...current.filter((item) => item.id !== job.id)])
@@ -137,8 +138,8 @@ export function App() {
 
           {notice && <div className="toast"><CheckCircle2 size={16} />{notice}<button onClick={() => setNotice('')} aria-label="알림 닫기"><X size={14} /></button></div>}
 
-          {page === 'Generate' && <GeneratePage onSubmit={submit} />}
-          {page === 'Jobs' && <JobsPage jobs={jobs} onNew={() => setPage('Generate')} />}
+          {page === 'Generate' && <GeneratePage onSubmit={submit} retryDraft={retryDraft} />}
+          {page === 'Jobs' && <JobsPage jobs={jobs} onNew={() => setPage('Generate')} onRetry={(job) => { setRetryDraft({ kind: job.kind || 't2v', prompt: job.kind === 'music' ? '' : job.prompt, inputPath: job.inputPath || '', duration: job.duration, width: job.width || 1344, height: job.height || 768, variants: 1, seed: job.seed, style: job.style || (job.kind === 'music' ? job.prompt : ''), lyrics: job.lyrics || '', profileId: job.profileId || '' }); setNotice('선택한 작업 입력을 생성 화면에 채웠습니다. 새 유료 작업으로만 다시 실행됩니다.'); setPage('Generate') }} />}
           {page === 'Edit' && <EditPage />}
           {page === 'Results' && <ResultsPage />}
           {page === 'Usage' && <UsagePage />}

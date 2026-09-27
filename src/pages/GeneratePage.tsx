@@ -2,12 +2,13 @@ import React from 'react'
 import { AudioLines, ImagePlus, Play, Video } from 'lucide-react'
 import { isTauri } from '../lib/tauri'
 import { listModalProfiles } from '../lib/usage'
+import { formatStamp, formatUsd } from '../lib/usage'
 import type { ModalProfile } from '../lib/usage'
 import type { JobKind } from '../types'
 import { defaultLyrics, defaultStyle, modeLabels, type Draft } from '../app-config'
 import { browserCapability } from '../ux/stageOne'
 
-export function GeneratePage({ onSubmit }: { onSubmit: (draft: Draft) => Promise<void> }) {
+export function GeneratePage({ onSubmit, retryDraft }: { onSubmit: (draft: Draft) => Promise<void>; retryDraft?: Draft | null }) {
   const [kind, setKind] = React.useState<JobKind>('fl2v')
   const [prompt, setPrompt] = React.useState('A cinematic supply crate ignites in a volcanic battlefield, red flare smoke, sparks and dust, dynamic tracking camera, realistic game trailer lighting, no logo, no text.')
   const [inputPath, setInputPath] = React.useState('')
@@ -21,6 +22,19 @@ export function GeneratePage({ onSubmit }: { onSubmit: (draft: Draft) => Promise
   const [profiles, setProfiles] = React.useState<ModalProfile[]>([])
   const [profileId, setProfileId] = React.useState('')
 
+  React.useEffect(() => {
+    if (!retryDraft) return
+    setKind(retryDraft.kind)
+    setPrompt(retryDraft.prompt)
+    setInputPath(retryDraft.inputPath)
+    setDuration(retryDraft.duration)
+    setResolution(`${retryDraft.width}x${retryDraft.height}`)
+    setVariants(retryDraft.variants)
+    setSeedText(retryDraft.seed === undefined ? '' : String(retryDraft.seed))
+    setStyle(retryDraft.style)
+    setLyrics(retryDraft.lyrics)
+    setProfileId(retryDraft.profileId)
+  }, [retryDraft])
   React.useEffect(() => {
     if (!isTauri) return
     void listModalProfiles()
@@ -102,7 +116,7 @@ export function GeneratePage({ onSubmit }: { onSubmit: (draft: Draft) => Promise
           {!isMusic && <label className="field-label">해상도<select value={resolution} onChange={(event) => setResolution(event.target.value)}><option value="1344x768">1344 × 768</option><option value="1152x640">1152 × 640</option><option value="896x512">896 × 512</option></select></label>}
           <label className="field-label">변주 수<select value={variants} onChange={(event) => setVariants(Number(event.target.value))}><option value={1}>1개</option><option value={2}>2개</option><option value={4}>4개</option><option value={8}>8개</option></select></label>
           <label className="field-label">Seed<input value={seedText} onChange={(event) => setSeedText(event.target.value.replace(/[^0-9]/g, ''))} placeholder="자동" inputMode="numeric" /></label>
-          <label className="field-label">실행 계정
+            <label className="field-label">실행 계정 {selectedProfile ? `${selectedProfile.workspace_label || 'workspace 미확인'} · ${selectedProfile.enabled ? '사용 가능' : '사용 불가'} · 마지막 동기화 ${formatStamp(selectedProfile.last_synced_at)} · ${selectedProfile.last_synced_at ? selectedProfile.budget_limit === null ? `실제 계량 ${formatUsd(selectedProfile.month_cost)}` : `예산 잔여 추정 ${formatUsd(selectedProfile.budget_limit - selectedProfile.month_cost)}` : '비용 미확인'}` : '계정 정보 없음'}
             <select value={profileId} onChange={(event) => setProfileId(event.target.value)}>
               {activeProfiles.length === 0 && <option value="">사용 중인 계정 없음</option>}
               {activeProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}
