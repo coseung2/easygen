@@ -1,0 +1,13 @@
+(function(){
+var root="F:/modal-gui/series/05-secret-inspector",project=root+"/ae/05-secret-inspector-master.aep",output=root+"/ae/05-secret-inspector-master.avi",log=root+"/ae/05-secret-inspector-master.log";
+var W=1920,H=1080,FPS=24,SHOT=5,ivory=[0.96,0.91,0.78],gold=[0.9,0.68,0.28],ink=[0.07,0.07,0.09];
+var captions=[["암행어사는","신분을 숨기고 다녔어요"],["남루한 옷으로","사람들 속에 섞였어요"],["소문을 모으고","현장을 살폈어요"],["임무를 마치면","기록을 올렸어요"],["마패는 신분을","증명하는 표식"],["마지막 순간","정체를 드러냈어요"]];
+var clips=[root+"/clips/c1.mp4",root+"/clips/c2.mp4",root+"/clips/c3.mp4",root+"/clips/c4.mp4",root+"/clips/c5.mp4",root+"/clips/c6.mp4"];
+var positions=[[1240,420],[150,760],[1250,780],[140,760],[1200,420],[960,790]];
+function note(s){var f=new File(log);f.open("a");f.writeln(new Date().toString()+" "+s);f.close();}
+function addType(c,v,x,y,size,col,b,e,center){var l=c.layers.addText(v),sp=l.property("Source Text"),d=sp.value;d.font="BMJUA";d.fontSize=size;d.fillColor=col;d.applyFill=true;d.applyStroke=true;d.strokeColor=ink;d.strokeWidth=2;d.justification=center?ParagraphJustification.CENTER_JUSTIFY:ParagraphJustification.LEFT_JUSTIFY;sp.setValue(d);var t=l.property("ADBE Transform Group"),p=t.property("ADBE Position"),o=t.property("ADBE Opacity"),s=t.property("ADBE Scale");p.setValueAtTime(0,[x,y+55]);p.setValueAtTime(b,[x,y+55]);p.setValueAtTime(e,[x,y]);o.setValueAtTime(0,0);o.setValueAtTime(b,0);o.setValueAtTime(e,100);s.setValueAtTime(0,[70,70]);s.setValueAtTime(b,[70,70]);s.setValueAtTime(e,[108,108]);s.setValueAtTime(e+0.15,[100,100]);}
+try{app.newProject();app.beginUndoGroup("Secret inspector kinetic master");var master=app.project.items.addComp("05 SECRET INSPECTOR / MASTER",W,H,1,30,FPS);
+for(var i=0;i<6;i++){var f=new File(clips[i]);if(!f.exists)throw new Error("Missing "+f.fsName);var fi=app.project.importFile(new ImportOptions(f)),c=app.project.items.addComp("SHOT "+(i+1),W,H,1,SHOT,FPS),v=c.layers.add(fi),cover=Math.max(W/fi.width,H/fi.height)*100;v.property("ADBE Transform Group").property("ADBE Scale").setValue([cover,cover]);v.outPoint=SHOT;var p=positions[i],center=i===5;addType(c,captions[i][0],p[0],p[1],i===5?82:70,ivory,0.42,0.78,center);addType(c,captions[i][1],p[0],p[1]+105,i===5?78:76,gold,0.82,1.22,center);var sl=master.layers.add(c);sl.startTime=i*SHOT;sl.inPoint=i*SHOT;sl.outPoint=(i+1)*SHOT;}
+var mf=new File(root+"/music-30s.wav"),mi=app.project.importFile(new ImportOptions(mf)),ml=master.layers.add(mi);ml.outPoint=30;var q=app.project.renderQueue.items.add(master);q.outputModule(1).file=new File(output);app.project.save(new File(project));app.endUndoGroup();note("SAVED "+project+" layers="+master.numLayers);app.quit();
+}catch(e){note("ERROR "+e.toString()+" line="+e.line);try{app.endUndoGroup();}catch(ignore){}app.quit();}
+})();
