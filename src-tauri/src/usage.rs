@@ -114,6 +114,87 @@ pub(crate) fn list_usage_rows(
     usage_rows(&conn, limit)
 }
 
+pub(crate) fn studio_usage_summary_rows(
+    conn: &Connection,
+    project_id: &str,
+) -> Result<Value, String> {
+    let mut statement = conn
+        .prepare(
+            "SELECT r.id, r.node_id, r.node_title, r.tool, r.status, \
+             (SELECT SUM(u.amount) FROM usage_records u WHERE u.job_id = r.job_id), \
+             (SELECT COUNT(*) FROM usage_records u WHERE u.job_id = r.job_id), \
+             (SELECT MAX(u.period) FROM usage_records u WHERE u.job_id = r.job_id), \
+             (SELECT MAX(u.observed_at) FROM usage_records u WHERE u.job_id = r.job_id) \
+             FROM studio_runs r WHERE r.project_id = ?1 \
+             ORDER BY r.created_at DESC, r.rowid DESC",
+        )
+        .map_err(|error| error.to_string())?;
+    let raw = statement
+        .query_map(params![project_id], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, Option<String>>(2)?,
+                row.get::<_, String>(3)?,
+                row.get::<_, String>(4)?,
+                row.get::<_, Option<f64>>(5)?,
+                row.get::<_, i64>(6)?,
+                row.get::<_, Option<String>>(7)?,
+                row.get::<_, Option<String>>(8)?,
+            ))
+        })
+        .map_err(|error| error.to_string())?
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .map_err(|error| error.to_string())?;
+    let mut confirmed_total = 0.0;
+    let mut priced_runs = 0i64;
+    let mut runs = Vec::with_capacity(raw.len());
+    for (run_id, node_id, node_title, tool, status, amount, record_count, period, observed_at) in
+        raw
+    {
+        let amount_kind = if record_count > 0 {
+            priced_runs += 1;
+            confirmed_total += amount.unwrap_or(0.0);
+            "confirmed"
+        } else if matches!(
+            status.as_str(),
+            "completed" | "prepared" | "failed" | "cancelled"
+        ) {
+            "unknown"
+        } else {
+            "pending"
+        };
+        runs.push(json!({
+            "run_id": run_id,
+            "node_id": node_id,
+            "node_title": node_title,
+            "tool": tool,
+            "status": status,
+            "amount": amount,
+            "amount_kind": amount_kind,
+            "period": period,
+            "observed_at": observed_at,
+        }));
+    }
+    let unpriced_runs = runs.len() as i64 - priced_runs;
+    Ok(json!({
+        "project_id": project_id,
+        "runs": runs,
+        "confirmed_total": confirmed_total,
+        "priced_runs": priced_runs,
+        "unpriced_runs": unpriced_runs,
+    }))
+}
+
+#[tauri::command]
+pub(crate) fn studio_usage_summary(
+    state: State<AppState>,
+    project_id: String,
+) -> Result<Value, String> {
+    let conn = state.0.lock().map_err(|error| error.to_string())?;
+    studio_usage_summary_rows(&conn, &project_id)
+}
+
 // ------------------------------------------------------------ billing sync
 
 #[derive(Serialize)]

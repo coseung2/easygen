@@ -1,4 +1,5 @@
 //! SQLite lifecycle, migrations and shared time/period queries.
+use base64::Engine;
 use rusqlite::{params, Connection};
 use std::sync::Mutex;
 
@@ -76,6 +77,125 @@ pub(crate) fn init_db(conn: &Connection) -> rusqlite::Result<()> {
           observed_at TEXT NOT NULL,
           FOREIGN KEY (modal_profile_id) REFERENCES modal_profiles(id)
         );
+        CREATE TABLE IF NOT EXISTS studio_projects (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          revision INTEGER NOT NULL DEFAULT 1,
+          node_count INTEGER NOT NULL DEFAULT 0,
+          asset_count INTEGER NOT NULL DEFAULT 0,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS studio_project_revisions (
+          project_id TEXT NOT NULL,
+          revision INTEGER NOT NULL,
+          document_json TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          PRIMARY KEY (project_id, revision),
+          FOREIGN KEY (project_id) REFERENCES studio_projects(id)
+        );
+        CREATE TABLE IF NOT EXISTS studio_assets (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          project_id TEXT NOT NULL,
+          file_name TEXT NOT NULL,
+          stored_path TEXT NOT NULL,
+          size_bytes INTEGER NOT NULL,
+          hash TEXT NOT NULL,
+          kind TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (project_id) REFERENCES studio_projects(id)
+        );
+        CREATE TABLE IF NOT EXISTS studio_runs (
+          id TEXT PRIMARY KEY,
+          project_id TEXT NOT NULL,
+          node_id TEXT NOT NULL,
+          node_title TEXT,
+          tool TEXT NOT NULL,
+          status TEXT NOT NULL,
+          stage TEXT,
+          job_id TEXT,
+          output_path TEXT,
+          result_asset_id TEXT,
+          input_json TEXT,
+          submission_key TEXT,
+          error_code TEXT,
+          error_message TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS connections (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          kind TEXT NOT NULL,
+          enabled INTEGER NOT NULL DEFAULT 1,
+          config_json TEXT,
+          auth_ref TEXT,
+          status TEXT NOT NULL DEFAULT 'saved',
+          last_error TEXT,
+          last_checked_at TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS connection_tools (
+          connection_id TEXT NOT NULL,
+          name TEXT NOT NULL,
+          description TEXT,
+          input_schema_json TEXT,
+          enabled INTEGER NOT NULL DEFAULT 1,
+          discovered_at TEXT NOT NULL,
+          PRIMARY KEY (connection_id, name)
+        );
+        CREATE TABLE IF NOT EXISTS provider_accounts (
+          id TEXT PRIMARY KEY,
+          provider TEXT NOT NULL,
+          account_id TEXT,
+          display_name TEXT,
+          email TEXT,
+          expires_at INTEGER,
+          status TEXT NOT NULL DEFAULT 'ok',
+          last_error TEXT,
+          credential_ref TEXT,
+          credential_version INTEGER NOT NULL DEFAULT 0,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS conversations (
+          id TEXT PRIMARY KEY,
+          project_id TEXT NOT NULL,
+          node_id TEXT,
+          title TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS messages (
+          id TEXT PRIMARY KEY,
+          conversation_id TEXT NOT NULL,
+          role TEXT NOT NULL,
+          content TEXT NOT NULL,
+          meta_json TEXT,
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (conversation_id) REFERENCES conversations(id)
+        );
+        CREATE TABLE IF NOT EXISTS workflow_definitions (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          tool TEXT NOT NULL,
+          location TEXT,
+          status TEXT NOT NULL DEFAULT 'registered',
+          inputs_json TEXT,
+          outputs_json TEXT,
+          notes TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS studio_templates (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          description TEXT,
+          document_json TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
         "#,
     )?;
     // Columns added after the first release; CREATE TABLE IF NOT EXISTS cannot add them.
@@ -84,15 +204,36 @@ pub(crate) fn init_db(conn: &Connection) -> rusqlite::Result<()> {
     ensure_column(conn, "modal_profiles", "last_sync_error", "TEXT")?;
     ensure_column(conn, "modal_profiles", "archived_at", "TEXT")?;
     ensure_column(conn, "jobs", "kind", "TEXT")?;
+    // Studio projects reuse the job pipeline; these columns are how a job is
+    // traced back to the canvas node that requested it.
+    ensure_column(conn, "jobs", "studio_project_id", "TEXT")?;
+    ensure_column(conn, "jobs", "studio_node_id", "TEXT")?;
+    ensure_column(conn, "studio_runs", "submission_key", "TEXT")?;
     ensure_column(conn, "usage_records", "period", "TEXT")?;
     ensure_column(conn, "usage_records", "label", "TEXT")?;
     ensure_column(conn, "usage_records", "object_id", "TEXT")?;
+    // 취소·다운로드 실패 뒤에도 원격 결과를 다시 받을 수 있게 위치를 남긴다.
+    ensure_column(conn, "studio_runs", "remote_output_path", "TEXT")?;
     // The index touches a new column, so it must be created after the migrations.
     conn.execute_batch(
         "CREATE INDEX IF NOT EXISTS usage_records_profile_period
            ON usage_records (modal_profile_id, source, period);
          CREATE INDEX IF NOT EXISTS usage_records_job_id
-           ON usage_records (job_id);",
+           ON usage_records (job_id);
+         CREATE INDEX IF NOT EXISTS studio_runs_project_created
+           ON studio_runs (project_id, created_at);
+         CREATE INDEX IF NOT EXISTS studio_runs_job_id
+           ON studio_runs (job_id);
+         CREATE INDEX IF NOT EXISTS studio_runs_submission
+           ON studio_runs (project_id, submission_key, created_at);
+         CREATE INDEX IF NOT EXISTS jobs_studio_project
+           ON jobs (studio_project_id, created_at);
+         CREATE INDEX IF NOT EXISTS connection_tools_connection
+           ON connection_tools (connection_id, name);
+         CREATE INDEX IF NOT EXISTS conversations_project
+           ON conversations (project_id, created_at);
+         CREATE INDEX IF NOT EXISTS messages_conversation
+           ON messages (conversation_id, created_at);",
     )?;
     seed_default_profile(conn)
 }
@@ -110,6 +251,16 @@ fn ensure_column(conn: &Connection, table: &str, column: &str, ddl: &str) -> rus
 
 pub(crate) fn now_rfc3339() -> String {
     chrono::Utc::now().to_rfc3339()
+}
+
+/// Short random suffix so ids created in the same millisecond cannot collide
+/// (two conversations, two runs, two jobs). Filesystem-safe on purpose.
+pub(crate) fn id_suffix() -> String {
+    let mut buffer = [0u8; 4];
+    match getrandom::getrandom(&mut buffer) {
+        Ok(()) => base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(buffer),
+        Err(_) => format!("{}", chrono::Utc::now().timestamp_subsec_nanos()),
+    }
 }
 
 /// Month tag (UTC) that keeps one billing period per profile.

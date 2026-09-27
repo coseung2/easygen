@@ -1,11 +1,19 @@
 mod accounts;
+mod ai_chat;
+mod chatgpt_auth;
+mod connections;
 mod database;
 mod diagnostics;
 mod jobs;
 mod media;
 mod paths;
 mod pipeline;
+mod studio;
+mod studio_export;
+mod studio_run;
+mod studio_templates;
 mod usage;
+mod workflows;
 
 use database::{init_db, AppState};
 use rusqlite::Connection;
@@ -30,6 +38,7 @@ fn health(state: State<AppState>) -> Result<Health, String> {
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let path = app.path().app_data_dir()?.join("database");
             std::fs::create_dir_all(&path)?;
@@ -37,7 +46,15 @@ fn main() {
             init_db(&conn)?;
             // A job left mid-flight by the previous process can never finish.
             jobs::fail_interrupted_jobs(&conn)?;
+            // Same for canvas runs: the worker or local pipeline is gone.
+            studio_run::fail_interrupted_runs(&conn)?;
+            // The two workflows this deployment actually has.
+            workflows::seed_default_workflows(&conn)?;
             app.manage(AppState(Mutex::new(conn)));
+            app.manage(studio::StudioRoot(paths::studio_root()));
+            app.manage(chatgpt_auth::SecretsRoot(
+                app.path().app_data_dir()?.join("secrets"),
+            ));
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -52,9 +69,13 @@ fn main() {
             accounts::archive_modal_profile,
             usage::list_usage_rows,
             usage::sync_modal_billing,
+            usage::studio_usage_summary,
             media::list_pipeline_inputs,
             media::read_json_file,
             media::make_thumbnail,
+            media::generate_silence,
+            media::generate_color_clip,
+            media::generate_still_clip,
             media::write_json_file,
             media::reveal_in_explorer,
             pipeline::analyze_audio,
@@ -62,6 +83,49 @@ fn main() {
             pipeline::render_spec,
             pipeline::build_storyboard,
             pipeline::list_renderers,
+            studio::studio_list_projects,
+            studio::studio_create_project,
+            studio::studio_load_project,
+            studio::studio_save_project,
+            studio::studio_delete_project,
+            studio::studio_import_asset,
+            studio::studio_probe_path,
+            studio_run::studio_start_node_run,
+            studio_run::studio_start_local_run,
+            studio_run::studio_finish_node_run,
+            studio_run::studio_list_node_runs,
+            studio_run::studio_retry_download,
+            studio_run::studio_cancel_run,
+            studio_export::studio_export_project,
+            studio_export::studio_import_project,
+            studio_templates::studio_template_list,
+            studio_templates::studio_template_save,
+            studio_templates::studio_template_delete,
+            connections::connection_list,
+            connections::connection_save,
+            connections::connection_delete,
+            connections::connection_set_enabled,
+            connections::connection_set_tool_enabled,
+            connections::connection_tools,
+            connections::connection_test,
+            connections::connection_call_tool,
+            chatgpt_auth::chatgpt_login_start,
+            chatgpt_auth::chatgpt_login_status,
+            chatgpt_auth::chatgpt_login_cancel,
+            chatgpt_auth::chatgpt_accounts,
+            chatgpt_auth::chatgpt_logout,
+            chatgpt_auth::chatgpt_ensure_fresh,
+            ai_chat::ai_chat_ensure_session,
+            ai_chat::ai_chat_send,
+            ai_chat::ai_chat_interrupt,
+            ai_chat::ai_chat_status,
+            ai_chat::conversation_ensure,
+            ai_chat::conversation_list,
+            ai_chat::message_append,
+            ai_chat::message_list,
+            workflows::workflow_list,
+            workflows::workflow_save,
+            workflows::workflow_delete,
             media::open_with_default
         ])
         .run(tauri::generate_context!())

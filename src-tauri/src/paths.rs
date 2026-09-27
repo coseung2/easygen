@@ -23,3 +23,7 @@ pub(crate) fn default_music_root() -> std::path::PathBuf {
 pub(crate) fn edits_root() -> std::path::PathBuf {
     std::path::PathBuf::from(r"F:\modal-gui\edits")
 }
+
+pub(crate) fn studio_root() -> std::path::PathBuf {
+    std::path::PathBuf::from(r"F:\modal-gui\studio")
+}

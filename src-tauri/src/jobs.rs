@@ -6,8 +6,10 @@ use crate::paths::{default_clips_root, default_music_root, repo_root};
 use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Write};
-use std::process::{Command, Stdio};
+use std::process::{ChildStdin, Command, Stdio};
+use std::sync::{Mutex, OnceLock};
 use std::thread;
 use tauri::{Emitter, Manager, State};
 
@@ -21,31 +23,75 @@ pub(crate) const PROFILE_UNAVAILABLE_CODE: &str = "PROFILE_UNAVAILABLE";
 /// refuses to rewrite finished history.
 const TERMINAL_STATUSES: &str = "('COMPLETED', 'CANCELLED', 'FAILED')";
 
+static WORKER_INPUTS: OnceLock<Mutex<HashMap<String, ChildStdin>>> = OnceLock::new();
+
+fn worker_inputs() -> &'static Mutex<HashMap<String, ChildStdin>> {
+    WORKER_INPUTS.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+/// Writes the cancel protocol message while the worker stdin is still open.
+/// `false` means the process is no longer represented in this app instance.
+pub(crate) fn cancel_live_worker(job_id: &str) -> Result<bool, String> {
+    let mut inputs = worker_inputs().lock().map_err(|error| error.to_string())?;
+    let Some(stdin) = inputs.get_mut(job_id) else {
+        return Ok(false);
+    };
+    writeln!(stdin, "{}", json!({"type": "cancel_job", "job_id": job_id}))
+        .map_err(|error| error.to_string())?;
+    stdin.flush().map_err(|error| error.to_string())?;
+    Ok(true)
+}
+
+fn forget_live_worker(job_id: &str) {
+    if let Ok(mut inputs) = worker_inputs().lock() {
+        inputs.remove(job_id);
+    }
+}
+
 #[derive(Deserialize, Clone)]
 pub(crate) struct NewJob {
-    id: String,
-    prompt: String,
-    input_path: String,
-    duration: i64,
-    resolution: String,
-    kind: Option<String>,
-    profile_id: Option<String>,
-    width: Option<i64>,
-    height: Option<i64>,
-    seed: Option<i64>,
-    style: Option<String>,
-    lyrics: Option<String>,
+    pub(crate) id: String,
+    pub(crate) prompt: String,
+    pub(crate) input_path: String,
+    pub(crate) duration: i64,
+    pub(crate) resolution: String,
+    pub(crate) kind: Option<String>,
+    pub(crate) profile_id: Option<String>,
+    pub(crate) width: Option<i64>,
+    pub(crate) height: Option<i64>,
+    pub(crate) seed: Option<i64>,
+    pub(crate) style: Option<String>,
+    pub(crate) lyrics: Option<String>,
+    /// Set when the job was requested from a studio canvas node.
+    #[serde(default)]
+    pub(crate) studio_project_id: Option<String>,
+    #[serde(default)]
+    pub(crate) studio_node_id: Option<String>,
+}
+
+/// Which worker entry point a start command uses. Studio runs reuse the same
+/// two paths as the queue screen.
+#[derive(Clone, Copy, PartialEq)]
+pub(crate) enum StartMode {
+    Video,
+    Music,
 }
 
 #[tauri::command]
 pub(crate) fn create_job(state: State<AppState>, job: NewJob) -> Result<(), String> {
-    let now = chrono::Utc::now().to_rfc3339();
     let conn = state.0.lock().map_err(|error| error.to_string())?;
-    let (profile_id, _) = resolve_profile(&conn, &job.profile_id)?;
+    create_job_row(&conn, &job)
+}
+
+/// Inserts the QUEUED row the worker will later report against. Shared by the
+/// queue screen and studio node runs so both appear in the same job history.
+pub(crate) fn create_job_row(conn: &Connection, job: &NewJob) -> Result<(), String> {
+    let now = now_rfc3339();
+    let (profile_id, _) = resolve_profile(conn, &job.profile_id)?;
     let prompt = job_prompt(&job);
     conn.execute(
-        "INSERT OR REPLACE INTO jobs (id,modal_profile_id,status,stage,kind,prompt,input_path,duration,resolution,seed,created_at) \
-         VALUES (?1,?2,'QUEUED','JOB_CREATED',?3,?4,?5,?6,?7,?8,?9)",
+        "INSERT OR REPLACE INTO jobs (id,modal_profile_id,status,stage,kind,prompt,input_path,duration,resolution,seed,created_at,studio_project_id,studio_node_id) \
+         VALUES (?1,?2,'QUEUED','JOB_CREATED',?3,?4,?5,?6,?7,?8,?9,?10,?11)",
         params![
             job.id,
             profile_id,
@@ -55,7 +101,9 @@ pub(crate) fn create_job(state: State<AppState>, job: NewJob) -> Result<(), Stri
             job.duration,
             job.resolution,
             job.seed,
-            now
+            now,
+            job.studio_project_id,
+            job.studio_node_id,
         ],
     )
     .map_err(|error| error.to_string())?;
@@ -95,6 +143,16 @@ pub(crate) fn fail_interrupted_jobs(conn: &Connection) -> rusqlite::Result<usize
 
 /// One worker process per job, so the selected Modal CLI profile can be passed
 /// through the child environment without touching the global active profile.
+/// Starts one worker process with a single JSONL message. Shared by job starts
+/// and by `studio_retry_download`, which only re-fetches a remote result.
+pub(crate) fn spawn_worker_message(
+    app: tauri::AppHandle,
+    message: Value,
+    modal_profile: Option<&str>,
+) -> Result<(), String> {
+    spawn_worker(app, message, modal_profile)
+}
+
 fn spawn_worker(
     app: tauri::AppHandle,
     message: Value,
@@ -125,12 +183,12 @@ fn spawn_worker(
     }
     let mut child = command.spawn().map_err(|error| error.to_string())?;
 
-    let stdin = child
+    let mut stdin = child
         .stdin
-        .as_mut()
+        .take()
         .ok_or_else(|| "worker stdin unavailable".to_string())?;
     writeln!(stdin, "{}", message).map_err(|error| error.to_string())?;
-    drop(child.stdin.take());
+    stdin.flush().map_err(|error| error.to_string())?;
 
     let stdout = child.stdout.take();
     let stderr = child.stderr.take();
@@ -140,6 +198,12 @@ fn spawn_worker(
         .get("job_id")
         .and_then(Value::as_str)
         .map(str::to_string);
+    if let Some(job_id) = watched_job.as_ref() {
+        worker_inputs()
+            .lock()
+            .map_err(|error| error.to_string())?
+            .insert(job_id.clone(), stdin);
+    }
 
     thread::spawn(move || {
         if let Some(stdout) = stdout {
@@ -164,6 +228,7 @@ fn spawn_worker(
         // A worker that dies without a failed/completed event must not leave the
         // row running forever.
         if let Some(job_id) = watched_job {
+            forget_live_worker(&job_id);
             match exit {
                 Ok(status) if status.success() => {}
                 Ok(status) => mark_worker_exit(&stdout_app, &job_id, status.code()),
@@ -196,6 +261,7 @@ pub(crate) fn mark_worker_exit_row(conn: &Connection, job_id: &str, code: Option
             now_rfc3339()
         ],
     );
+    crate::studio_run::mark_run_worker_exit(conn, job_id, code);
 }
 
 /// A job that never reached a worker would otherwise stay QUEUED in the table.
@@ -260,13 +326,28 @@ pub(crate) fn mark_start_failure_row(conn: &Connection, job_id: &str, detail: &s
 }
 
 fn persist_worker_event(app: &tauri::AppHandle, event: &Value) {
-    let Some(app_state) = app.try_state::<AppState>() else {
-        return;
+    let terminal_job = if matches!(
+        event.get("type").and_then(Value::as_str),
+        Some("completed" | "failed" | "cancelled")
+    ) {
+        event
+            .get("job_id")
+            .and_then(Value::as_str)
+            .map(str::to_string)
+    } else {
+        None
     };
-    let Ok(conn) = app_state.0.lock() else {
-        return;
-    };
-    let _ = apply_worker_event(&conn, event);
+    if let Some(app_state) = app.try_state::<AppState>() {
+        if let Ok(conn) = app_state.0.lock() {
+            let _ = apply_worker_event(&conn, event);
+            // Studio runs mirror the same event stream so the canvas can show progress
+            // without re-deriving it from the queue table.
+            let _ = crate::studio_run::apply_run_event(&conn, event);
+        }
+    }
+    if let Some(job_id) = terminal_job {
+        forget_live_worker(&job_id);
+    }
 }
 
 /// Mirrors one worker event into `jobs` (and keeps an audit row in `job_events`).
@@ -392,28 +473,49 @@ pub(crate) fn start_job(
     state: State<AppState>,
     job: NewJob,
 ) -> Result<(), String> {
-    let kind = job.kind.clone().unwrap_or_else(|| "t2v".to_string());
+    start_job_inner(app, &state, job, StartMode::Video)
+}
+
+/// Shared by `start_job`, `start_music` and studio node runs: resolve the
+/// account, hand the payload to one worker process, and record spawn failures.
+pub(crate) fn start_job_inner(
+    app: tauri::AppHandle,
+    state: &State<AppState>,
+    job: NewJob,
+    mode: StartMode,
+) -> Result<(), String> {
     let job_id = job.id.clone();
-    let (profile_id, modal_profile) = resolve_for_start(&state, &job.profile_id, &job_id)?;
+    let (profile_id, modal_profile) = resolve_for_start(state, &job.profile_id, &job_id)?;
     let modal_profile_env = modal_profile.clone();
-    if let Err(error) = spawn_worker(
-        app,
-        json!({
-            "type": "start_job",
+    let message = match mode {
+        StartMode::Video => {
+            let kind = job.kind.clone().unwrap_or_else(|| "t2v".to_string());
+            json!({
+                "type": "start_job",
+                "job_id": job.id,
+                "profile_id": profile_id,
+                "modal_profile": modal_profile,
+                "input_path": job.input_path,
+                "prompt": job.prompt,
+                "kind": kind,
+                "duration": job.duration,
+                "width": job.width.unwrap_or(1344),
+                "height": job.height.unwrap_or(768),
+                "seed": job.seed.unwrap_or(42)
+            })
+        }
+        StartMode::Music => json!({
+            "type": "start_music",
             "job_id": job.id,
             "profile_id": profile_id,
             "modal_profile": modal_profile,
-            "input_path": job.input_path,
-            "prompt": job.prompt,
-            "kind": kind,
-            "duration": job.duration,
-            "width": job.width.unwrap_or(1344),
-            "height": job.height.unwrap_or(768),
-            "seed": job.seed.unwrap_or(42)
+            "style": job_prompt(&job),
+            "lyrics": job.lyrics.clone().unwrap_or_default(),
+            "seed": job.seed.unwrap_or(4301)
         }),
-        modal_profile_env.as_deref(),
-    ) {
-        mark_spawn_failure(&state, &job_id, &error);
+    };
+    if let Err(error) = spawn_worker(app, message, modal_profile_env.as_deref()) {
+        mark_spawn_failure(state, &job_id, &error);
         return Err(error);
     }
     Ok(())
@@ -501,26 +603,5 @@ pub(crate) fn start_music(
     state: State<AppState>,
     job: NewJob,
 ) -> Result<(), String> {
-    let job_id = job.id.clone();
-    let (profile_id, modal_profile) = resolve_for_start(&state, &job.profile_id, &job_id)?;
-    let style = job_prompt(&job);
-    let lyrics = job.lyrics.clone().unwrap_or_default();
-    let modal_profile_env = modal_profile.clone();
-    if let Err(error) = spawn_worker(
-        app,
-        json!({
-            "type": "start_music",
-            "job_id": job.id,
-            "profile_id": profile_id,
-            "modal_profile": modal_profile,
-            "style": style,
-            "lyrics": lyrics,
-            "seed": job.seed.unwrap_or(4301)
-        }),
-        modal_profile_env.as_deref(),
-    ) {
-        mark_spawn_failure(&state, &job_id, &error);
-        return Err(error);
-    }
-    Ok(())
+    start_job_inner(app, &state, job, StartMode::Music)
 }

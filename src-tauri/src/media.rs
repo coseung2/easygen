@@ -168,8 +168,49 @@ pub(crate) fn reveal_in_explorer(path: String) -> Result<(), String> {
 
 #[tauri::command]
 pub(crate) fn open_with_default(path: String) -> Result<(), String> {
-    Command::new("cmd")
-        .args(["/C", "start", "", &path])
+    open_with_shell(&path)
+}
+
+/// Hands a URL or file path to the Windows shell.
+///
+/// The previous `cmd /C start "" <target>` path let `cmd` parse the target, so
+/// a URL query string was cut at the first `&` (the OAuth login link arrived
+/// without `client_id` and the rest) and `%` sequences could be expanded. The
+/// shell API receives the string as one argument instead.
+#[cfg(windows)]
+pub(crate) fn open_with_shell(target: &str) -> Result<(), String> {
+    use windows_sys::Win32::UI::Shell::ShellExecuteW;
+    let operation: Vec<u16> = "open\0".encode_utf16().collect();
+    let file = shell_target(target);
+    let result = unsafe {
+        ShellExecuteW(
+            std::ptr::null_mut(),
+            operation.as_ptr(),
+            file.as_ptr(),
+            std::ptr::null(),
+            std::ptr::null(),
+            1,
+        )
+    };
+    if (result as isize) <= 32 {
+        return Err(format!("셸 실행이 실패했습니다 (코드 {})", result as isize));
+    }
+    Ok(())
+}
+
+/// The UTF-16 string handed to `ShellExecuteW`. Kept separate so a test can
+/// prove query strings survive intact.
+#[cfg(windows)]
+pub(crate) fn shell_target(target: &str) -> Vec<u16> {
+    let mut wide: Vec<u16> = target.encode_utf16().collect();
+    wide.push(0);
+    wide
+}
+
+#[cfg(not(windows))]
+pub(crate) fn open_with_shell(target: &str) -> Result<(), String> {
+    Command::new("xdg-open")
+        .arg(target)
         .spawn()
         .map(|_| ())
         .map_err(|error| error.to_string())
@@ -183,4 +224,139 @@ pub(crate) fn write_json_file(path: String, value: Value) -> Result<(), String> 
     }
     let body = serde_json::to_string_pretty(&value).map_err(|error| error.to_string())?;
     std::fs::write(target, body + "\n").map_err(|error| error.to_string())
+}
+
+/// 무음 오디오 트랙. 오디오 입력 없이 타이포/모션만 렌더할 때 쓴다.
+#[tauri::command]
+pub(crate) fn generate_silence(path: String, seconds: f64) -> Result<String, String> {
+    let target = std::path::PathBuf::from(&path);
+    if let Some(parent) = target.parent() {
+        std::fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+    }
+    if target.exists() {
+        return Ok(target.to_string_lossy().to_string());
+    }
+    let duration = format!("{:.3}", seconds.max(0.5));
+    let output = Command::new("ffmpeg")
+        .args([
+            "-v",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "anullsrc=channel_layout=stereo:sample_rate=48000",
+            "-t",
+            duration.as_str(),
+            "-c:a",
+            "pcm_s16le",
+            "-y",
+        ])
+        .arg(&target)
+        .output()
+        .map_err(|error| format!("ffmpeg를 실행하지 못했습니다: {error}"))?;
+    if !output.status.success() {
+        return Err(String::from_utf8_lossy(&output.stderr).to_string());
+    }
+    Ok(target.to_string_lossy().to_string())
+}
+
+/// 단색 배경 클립. 타이포/모션 노드에 배경 영상이 없을 때 쓴다.
+#[tauri::command]
+pub(crate) fn generate_color_clip(
+    path: String,
+    seconds: f64,
+    width: i64,
+    height: i64,
+    color: Option<String>,
+) -> Result<String, String> {
+    let target = std::path::PathBuf::from(&path);
+    if let Some(parent) = target.parent() {
+        std::fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+    }
+    if target.exists() {
+        return Ok(target.to_string_lossy().to_string());
+    }
+    let duration = format!("{:.3}", seconds.max(0.5));
+    let size = format!("{}x{}", width.clamp(64, 4096), height.clamp(64, 4096));
+    let source = format!(
+        "color=c={}:s={}:r=24",
+        color.unwrap_or_else(|| String::from("black")),
+        size
+    );
+    let output = Command::new("ffmpeg")
+        .args([
+            "-v",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            source.as_str(),
+            "-t",
+            duration.as_str(),
+            "-pix_fmt",
+            "yuv420p",
+            "-c:v",
+            "libx264",
+            "-y",
+        ])
+        .arg(&target)
+        .output()
+        .map_err(|error| format!("ffmpeg를 실행하지 못했습니다: {error}"))?;
+    if !output.status.success() {
+        return Err(String::from_utf8_lossy(&output.stderr).to_string());
+    }
+    Ok(target.to_string_lossy().to_string())
+}
+
+/// 이미지 한 장을 지정 길이의 클립으로 만든다. 모션/타이포 배경으로 쓴다.
+#[tauri::command]
+pub(crate) fn generate_still_clip(
+    path: String,
+    source: String,
+    seconds: f64,
+    width: i64,
+    height: i64,
+) -> Result<String, String> {
+    let target = std::path::PathBuf::from(&path);
+    if let Some(parent) = target.parent() {
+        std::fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+    }
+    if target.exists() {
+        return Ok(target.to_string_lossy().to_string());
+    }
+    if !std::path::Path::new(&source).is_file() {
+        return Err(format!("이미지 파일을 찾을 수 없습니다: {source}"));
+    }
+    let duration = format!("{:.3}", seconds.max(0.5));
+    let size = format!("{}x{}", width.clamp(64, 4096), height.clamp(64, 4096));
+    let filter = format!(
+        "scale={size}:force_original_aspect_ratio=decrease,pad={size}:(ow-iw)/2:(oh-ih)/2:color=black"
+    );
+    let output = Command::new("ffmpeg")
+        .args([
+            "-v",
+            "error",
+            "-loop",
+            "1",
+            "-i",
+            source.as_str(),
+            "-t",
+            duration.as_str(),
+            "-r",
+            "24",
+            "-vf",
+            filter.as_str(),
+            "-pix_fmt",
+            "yuv420p",
+            "-c:v",
+            "libx264",
+            "-y",
+        ])
+        .arg(&target)
+        .output()
+        .map_err(|error| format!("ffmpeg를 실행하지 못했습니다: {error}"))?;
+    if !output.status.success() {
+        return Err(String::from_utf8_lossy(&output.stderr).to_string());
+    }
+    Ok(target.to_string_lossy().to_string())
 }

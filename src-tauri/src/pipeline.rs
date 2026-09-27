@@ -1,11 +1,12 @@
 //! Local editing/rendering requests and pipeline event forwarding.
 use crate::paths::repo_root;
+use rusqlite::params;
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::io::{BufRead, BufReader};
 use std::process::{Command, Stdio};
 use std::thread;
-use tauri::Emitter;
+use tauri::{Emitter, Manager};
 
 #[derive(Deserialize)]
 pub(crate) struct AnalyzeRequest {
@@ -58,6 +59,66 @@ pub(crate) struct StoryboardRequest {
 }
 
 /// Runs the pipeline CLI and forwards each JSON line to the frontend as a
+/// Closes the studio run row when a local pipeline reports its outcome.
+///
+/// The screen that started the render is not always the screen that is open
+/// when it finishes, so completion cannot depend on a frontend subscriber:
+/// without this, leaving the studio during a render left the run `running`
+/// until the next app start turned it into a failure.
+fn persist_pipeline_outcome(app: &tauri::AppHandle, event: &Value) {
+    let Some(run_id) = event.get("run_id").and_then(Value::as_str) else {
+        return;
+    };
+    let event_type = event.get("type").and_then(Value::as_str).unwrap_or_default();
+    let output = event
+        .get("output")
+        .or_else(|| event.get("artifact"))
+        .and_then(Value::as_str);
+    let message = event
+        .get("message")
+        .and_then(Value::as_str)
+        .map(str::to_string)
+        .or_else(|| {
+            event
+                .get("detail")
+                .and_then(Value::as_str)
+                .map(|detail| format!("파이프라인 오류: {}", detail.chars().take(180).collect::<String>()))
+        });
+    let (status, path) = match event_type {
+        "render_completed" => ("completed", output),
+        "prepare_completed" => ("prepared", output),
+        "failed" => ("failed", None),
+        "process_exit" if event.get("success").and_then(Value::as_bool) == Some(false) => {
+            ("failed", None)
+        }
+        _ => return,
+    };
+    if status != "failed" && path.is_none() {
+        return;
+    }
+    let Some(state) = app.try_state::<crate::database::AppState>() else {
+        return;
+    };
+    let Ok(conn) = state.0.lock() else {
+        return;
+    };
+    // 이미 끝난 실행은 건드리지 않는다. 늦은 이벤트가 기록을 덮으면 안 된다.
+    let current: Option<String> = conn
+        .query_row(
+            "SELECT status FROM studio_runs WHERE id = ?1",
+            params![run_id],
+            |row| row.get(0),
+        )
+        .ok();
+    if matches!(
+        current.as_deref(),
+        Some("completed") | Some("prepared") | Some("failed") | Some("cancelled")
+    ) {
+        return;
+    }
+    let _ = crate::studio_run::finish_run(&conn, run_id, status, path, message.as_deref(), None);
+}
+
 /// `pipeline-event` tagged with the run id.
 fn spawn_pipeline(app: tauri::AppHandle, run_id: String, args: Vec<String>) -> Result<(), String> {
     let mut child = Command::new("python")
@@ -86,6 +147,8 @@ fn spawn_pipeline(app: tauri::AppHandle, run_id: String, args: Vec<String>) -> R
                         if let Some(object) = value.as_object_mut() {
                             object.insert("run_id".into(), Value::String(stdout_run.clone()));
                         }
+                        // 화면을 떠나 있어도 완료가 기록되도록 실행 행을 여기서 닫는다.
+                        persist_pipeline_outcome(&stdout_app, &value);
                         let _ = stdout_app.emit("pipeline-event", value);
                     }
                     Err(_) => {

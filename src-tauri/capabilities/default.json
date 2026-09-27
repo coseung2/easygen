@@ -3,5 +3,5 @@
   "identifier": "default",
   "description": "Local control plane window. Asset preview scope is defined by app.security.assetProtocol in tauri.conf.json.",
   "windows": ["main"],
-  "permissions": ["core:default"]
+  "permissions": ["core:default", "dialog:default"]
 }
