@@ -12,3 +12,5 @@ __pycache__/
 !.env.example
 .tooling/
 .playwright-cli/
+.codex-remote-attachments/
+output/
