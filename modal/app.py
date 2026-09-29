@@ -24,6 +24,9 @@ image = modal.Image.from_id("im-AYSPVNRooQYXy8IgQlPWOJ").run_commands(
     "if [ -f /root/ComfyUI/custom_nodes/H3-Optimizations/requirements.txt ]; then python -m pip install -r /root/ComfyUI/custom_nodes/H3-Optimizations/requirements.txt; fi",
     "git clone https://github.com/Deno2026/comfyui-deno-custom-nodes.git /root/ComfyUI/custom_nodes/comfyui-deno-custom-nodes",
     "if [ -f /root/ComfyUI/custom_nodes/comfyui-deno-custom-nodes/requirements.txt ]; then python -m pip install -r /root/ComfyUI/custom_nodes/comfyui-deno-custom-nodes/requirements.txt; fi",
+    "git -C /root/ComfyUI fetch --depth 1 origin tag v0.37.0 && git -C /root/ComfyUI checkout --detach v0.37.0",
+    "cd /root/ComfyUI && test $(git rev-parse HEAD) = 73c9bad4d21e7addbe1d13bc92eee0f1431b017d",
+    "python -m pip install -r /root/ComfyUI/requirements.txt",
 )
 data = modal.Volume.from_name("minimax-h3-comfyui-data")
 models = modal.Volume.from_name("minimax-h3-models")
@@ -36,8 +39,6 @@ SKIP = {
     "FancyTimerNode",
     "DenoTextEncoderUnload",
     "Seed (rgthree)",
-    "BlockSparseAttention",
-    "MiniMaxH3MemoryEfficientSageAttentionPatch",
     "MiniMaxChunkFeedForward",
 }
 WIDGET_MAP = {
@@ -83,6 +84,12 @@ def _normalise_input_filename(value: str) -> str:
     return value.replace("\\", "/").removeprefix("input/")
 
 
+def _half_bucket(value: int) -> int:
+    """Half of a requested dimension, aligned to the 32px H3 bucket grid."""
+    half = max(32, value // 2)
+    return half - (half % 32)
+
+
 def _convert(workflow: dict, prompt: str, input_filename: str, output_prefix: str, seconds: float, width: int, height: int, seed: int) -> dict:
     nodes = {str(n["id"]): n for n in workflow.get("nodes", []) if n.get("type") not in SKIP and n.get("mode", 0) != 4}
     links = {str(row[0]): row for row in workflow.get("links", [])}
@@ -94,8 +101,6 @@ def _convert(workflow: dict, prompt: str, input_filename: str, output_prefix: st
         "261": {0: links.get("801")},
         "286": {0: links.get("901")},
         "295": {0: links.get("822")},
-        "332": {0: links.get("894")},
-        "272": {0: links.get("890")},
         "287": {0: links.get("823")},
     }
     api = {node_id: {"class_type": node["type"], "inputs": {}} for node_id, node in nodes.items()}
@@ -130,6 +135,13 @@ def _convert(workflow: dict, prompt: str, input_filename: str, output_prefix: st
                 for name, value in zip(WIDGET_MAP.get(node["type"], names), widgets):
                     api[node_id]["inputs"].setdefault(name, value)
 
+        # The released H3 workflows contain a Sage patch node followed by the
+        # native Sol-Attn sparse node. Keep both graph positions, replacing
+        # only the dense backend with Comfy Kitchen.
+        if node["type"] == "MiniMaxH3MemoryEfficientSageAttentionPatch":
+            api[node_id]["class_type"] = "ModelAttentionBackend"
+            api[node_id]["inputs"]["attention"] = "comfy kitchen attention"
+
         if node["type"] == "PrimitiveStringMultiline":
             api[node_id]["inputs"]["value"] = prompt
         if node["type"] == "LoadImage":
@@ -137,8 +149,16 @@ def _convert(workflow: dict, prompt: str, input_filename: str, output_prefix: st
         if node["type"] == "DenoMiniMaxH3ReferenceImageLoader":
             api[node_id]["inputs"]["image_paths"] = _normalise_input_filename(input_filename)
         if node["type"] in {"MiniMaxH3ImageToVideo", "DenoMiniMaxH3ReferenceToVideo"}:
-            api[node_id]["inputs"]["width"] = width
-            api[node_id]["inputs"]["height"] = height
+            # Workflows that take the sampler size from a ResolutionSelector link
+            # sample at half resolution and let the latent upscaler restore the
+            # target size. Mirror that chain so the requested output size is
+            # honoured instead of the workflow's fixed 16:9 preset.
+            if isinstance(api[node_id]["inputs"].get("width"), list):
+                api[node_id]["inputs"]["width"] = _half_bucket(width)
+                api[node_id]["inputs"]["height"] = _half_bucket(height)
+            else:
+                api[node_id]["inputs"]["width"] = width
+                api[node_id]["inputs"]["height"] = height
             frames = max(5, round(seconds * 24))
             api[node_id]["inputs"]["length"] = frames + (5 - (frames % 17)) % 17
         if node["type"] == "VHS_VideoCombine":
@@ -147,6 +167,8 @@ def _convert(workflow: dict, prompt: str, input_filename: str, output_prefix: st
             api[node_id]["inputs"]["noise_seed"] = seed
         if node["type"] == "MinimaxH3LatentUpscaler3D":
             api[node_id]["inputs"]["align"] = 1
+            api[node_id]["inputs"]["mode.width"] = width
+            api[node_id]["inputs"]["mode.height"] = height
         if node["type"] == "LoraLoaderModelOnly":
             api[node_id]["inputs"]["lora_name"] = "H3/lightx2v_hybrid-4to8step-full-fusion_Turbo_pruned.safetensors"
     return api
@@ -211,6 +233,9 @@ class LatestH3:
         sys.path.insert(0, "/root/h3_service")
         from h3_service.license_gate import require_attestation
         require_attestation(attestation, purpose="latest H3 generation")
+        # The caller uploads the input image immediately before this call; a
+        # warm container still sees its older volume snapshot otherwise.
+        data.reload()
         workflow_name = {"t2v": "video_minimax_h3_t2v.json", "ref2v": "video_minimax_h3_r2v.json"}.get(kind, "video_minimax_h3_i2v.json")
         workflow = json.loads((ROOT / "user/default/workflows" / workflow_name).read_text(encoding="utf-8"))
         api = _convert(workflow, prompt, input_filename, f"PUBG/{kind}", seconds, width, height, seed)
@@ -226,6 +251,34 @@ class LatestH3:
         relative = str(Path(record.get("subfolder", "")) / record["filename"])
         data.commit()
         return {"status": "success", "prompt_id": prompt_id, "relative_path": relative, "kind": kind}
+
+    @modal.method()
+    def health(self) -> dict:
+        """Verify the deployed attention nodes without running H3 generation."""
+        with urllib.request.urlopen(f"http://127.0.0.1:{PORT}/object_info", timeout=30) as response:
+            info = json.load(response)
+        backend = info.get("ModelAttentionBackend", {})
+        attention_definition = backend.get("input", {}).get("required", {}).get("attention")
+        options = attention_definition[1].get("options", []) if (
+            isinstance(attention_definition, list) and len(attention_definition) > 1
+            and isinstance(attention_definition[1], dict)
+        ) else []
+        required = {"ModelAttentionBackend", "BlockSparseAttention"}
+        missing = sorted(required - set(info))
+        if missing or "comfy kitchen attention" not in options:
+            raise RuntimeError({"missing": missing, "attention_definition": attention_definition,
+                                "backend_input": backend.get("input")})
+        return {
+            "status": "ready",
+            "attention_backend": "comfy kitchen attention",
+            "sparse_method": "sol-attn",
+            "comfy_nodes": sorted(required),
+        }
+
+
+@app.local_entrypoint()
+def health() -> None:
+    print(LatestH3().health.remote())
 
 
 if __name__ == "__main__":
