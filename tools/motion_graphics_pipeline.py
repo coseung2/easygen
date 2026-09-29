@@ -28,6 +28,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from tools.lab_paths import data_path  # noqa: E402
 from tools.renderers import (  # noqa: E402
     RenderRequest,
     TextCue,
@@ -444,7 +445,7 @@ def main() -> None:
     analyze.set_defaults(handler=command_analyze)
 
     render = sub.add_parser("render", help="render a base or motion-graphics cut")
-    render.add_argument("--clips-root", type=Path, default=Path(r"F:\modal-gui\h3-clips\generated"))
+    render.add_argument("--clips-root", type=Path, default=data_path("h3-clips", "generated"))
     render.add_argument("--audio", type=Path, required=True)
     render.add_argument("--markers", type=Path, default=None)
     render.add_argument("--cues", type=Path, default=None)
@@ -472,7 +473,7 @@ def main() -> None:
     )
     storyboard.add_argument("--audio", type=Path, required=True)
     storyboard.add_argument(
-        "--clips-root", type=Path, default=Path(r"F:\modal-gui\h3-clips\generated")
+        "--clips-root", type=Path, default=data_path("h3-clips", "generated")
     )
     storyboard.add_argument("--markers", type=Path, default=None)
     storyboard.add_argument("--cues", type=Path, default=None)

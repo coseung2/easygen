@@ -1,6 +1,6 @@
 //! ChatGPT OAuth (authorization code + PKCE) and account storage.
 //!
-//! The flow follows the reference implementation in `coseung2/oauth-collect`
+//! The flow follows the project's OAuth reference implementation.
 //! (commit fd42ba1): fixed loopback redirect `http://localhost:1455/auth/callback`,
 //! PKCE S256, one accepted `state`, and form-encoded token requests.
 //!

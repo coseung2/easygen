@@ -16,12 +16,15 @@ import urllib.request
 import uuid
 from pathlib import Path
 
-import modal
-
-
 REPO = Path(__file__).resolve().parents[1]
-SOURCE = Path(r"F:\modal-gui\lab\2026-09-28-turing-enigma\v7")
-RESULTS = Path(r"F:\modal-gui\lab\2026-09-29-h3-attention-compare")
+sys.path.insert(0, str(REPO))
+
+import modal
+from tools.lab_paths import lab_path
+
+
+SOURCE = lab_path("2026-09-28-turing-enigma", "v7")
+RESULTS = lab_path("2026-09-29-h3-attention-compare")
 WORKFLOW = RESULTS / "source-r2v.json"
 INPUT = SOURCE / "h3" / "inputs" / "r2-rotors.png"
 PORT = 8188

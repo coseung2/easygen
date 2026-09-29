@@ -30,7 +30,7 @@ def main():
             d.rectangle((0,420,W,768),fill=BLUE); d.ellipse((1050,70,1190,210),fill=GOLD); ship(d,500)
             d.rectangle((980,230,1080,500),fill=INK,outline=GOLD,width=6)
         elif i==5:
-            d.rectangle((0,0,W,H),fill=INK); common(d); ship(d,560); 
+            d.rectangle((0,0,W,H),fill=INK); common(d); ship(d,560);
             d.ellipse((720,210,1050,540),outline=GOLD,width=6); d.ellipse((820,310,950,440),outline=BLUE,width=5); d.line((560,375,720,375),fill=RED,width=6); d.line((1050,375,1200,375),fill=BLUE,width=6)
         else:
             d.rectangle((0,0,W,H),fill=INK); common(d); ship(d,570); d.ellipse((650,200,1050,600),outline=GOLD,width=6); d.ellipse((820,370,880,430),fill=GOLD)

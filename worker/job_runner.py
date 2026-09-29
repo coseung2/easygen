@@ -23,11 +23,17 @@ def data_root() -> Path:
 
 
 def music_root() -> Path:
-    return Path(os.environ.get("MODAL_GUI_MUSIC_ROOT") or data_root() / "music").expanduser()
+    configured = os.environ.get("MODAL_GUI_MUSIC_ROOT")
+    if configured and Path(configured).expanduser().is_absolute():
+        return Path(configured).expanduser()
+    return data_root() / "music"
 
 
 def output_root() -> Path:
-    return Path(os.environ.get("MODAL_GUI_OUTPUT_ROOT") or data_root() / "h3-clips" / "generated").expanduser()
+    configured = os.environ.get("MODAL_GUI_OUTPUT_ROOT")
+    if configured and Path(configured).expanduser().is_absolute():
+        return Path(configured).expanduser()
+    return data_root() / "h3-clips" / "generated"
 
 
 def call_id_of(call: Any) -> str:

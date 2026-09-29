@@ -10,11 +10,11 @@ Autograph 배치 렌더는 프로젝트를 코드로 만들지 않고, 미리 �
 
 ```
 AutographRenderer.exe trailer.agp --background --no-splashscreen --render Main \
-  output_file=F:\modal-gui\deliverables\out.mov \
+  output_file=<data-root>/deliverables/out.mov \
   format=1920x1080:1.0 framerate=24.0 \
   range=0:00:00:00;0:01:00:00 \
   container=mov video_codec=prores \
-  input_json=F:\modal-gui\deliverables\out.autograph-input.json
+  input_json=<data-root>/deliverables/out.autograph-input.json
 ```
 
 `range`는 `H:MM:SS:FF` 타임코드 두 개를 `;`로 잇습니다. 플러그인이 초를 이 형식으로
@@ -25,8 +25,8 @@ AutographRenderer.exe trailer.agp --background --no-splashscreen --render Main \
 
 ```json
 {
-  "clips": ["F:/modal-gui/h3-clips/generated/fl2v_00002-audio.mp4", "..."],
-  "audio": "F:/modal-gui/music/yue2/.../audio-60s.flac",
+  "clips": ["<data-root>/h3-clips/generated/clip.mp4", "..."],
+  "audio": "<data-root>/music/yue2/audio.flac",
   "shot_durations": [5.5, 5.7, 6.35, 6.45, 6.0, 6.0, 6.45, 6.0, 6.0, 5.55],
   "beats": [0.55, 1.25, 4.65, "..."],
   "cues": [{ "start": 0.0, "end": 5.0, "text": "PUBG: BATTLEGROUNDS", "size": 86 }]
@@ -65,7 +65,7 @@ AutographRenderer.exe trailer.agp --background --no-splashscreen --render Main \
 
 ```powershell
 python tools\motion_graphics_pipeline.py render --renderer autograph `
-  --renderer-option template=F:\modal-gui\templates\trailer.agp `
+  --renderer-option "template=$env:MODAL_GUI_DATA_ROOT/templates/trailer.agp" `
   --mode graphics --audio <오디오> --clips-root <클립폴더> `
-  --output F:\modal-gui\deliverables\out.mov --snap-cuts
+  --output "$env:MODAL_GUI_DATA_ROOT/deliverables/out.mov" --snap-cuts
 ```

@@ -15,9 +15,8 @@ use std::process::{Command, Stdio};
 use std::thread;
 use tauri::Emitter;
 
-/// Python with rembg (BRIA / BiRefNet) available. The system Python lacks a compatible NumPy,
-/// so templates run under this venv unless `MODAL_GUI_TEMPLATE_PYTHON` points elsewhere.
-const DEFAULT_TEMPLATE_PYTHON: &str = r"F:\modal-gui\lab\2026-09-28-junyoung-intro\.venv\Scripts\python.exe";
+/// Python with rembg (BRIA / BiRefNet) available. A project-local venv is used unless
+/// `MODAL_GUI_TEMPLATE_PYTHON` points to another compatible interpreter.
 
 #[derive(Serialize, Clone)]
 pub(crate) struct TemplateInfo {
@@ -47,7 +46,7 @@ fn pipelines_root() -> PathBuf {
 pub(crate) fn template_python() -> PathBuf {
     std::env::var("MODAL_GUI_TEMPLATE_PYTHON")
         .map(PathBuf::from)
-        .unwrap_or_else(|_| PathBuf::from(DEFAULT_TEMPLATE_PYTHON))
+        .unwrap_or_else(|_| repo_root().join(".venv").join("Scripts").join("python.exe"))
 }
 
 fn read_json(path: &Path) -> Result<Value, String> {
@@ -244,8 +243,10 @@ mod tests {
     #[ignore]
     fn freeze_cast_renders_a_new_job() {
         let (_, _, folder) = resolve("local-freeze-cast@1.0").unwrap();
-        let job = std::path::PathBuf::from(r"F:\modal-gui\pipelines\local-freeze-cast\1.0\golden-inputs\smoke-2cast.json");
-        let out = std::path::PathBuf::from(r"F:\modal-gui\pipelines\local-freeze-cast\1.0\release-check\smoke-2cast.mp4");
+        let data_root = PathBuf::from(std::env::var("MODAL_GUI_DATA_ROOT").expect("set MODAL_GUI_DATA_ROOT for the ignored integration test"));
+        let test_root = data_root.join("pipelines").join("local-freeze-cast").join("1.0");
+        let job = test_root.join("golden-inputs").join("smoke-2cast.json");
+        let out = test_root.join("release-check").join("smoke-2cast.mp4");
         let mut value = read_json(&job).unwrap();
         value["output"] = Value::String(out.display().to_string());
         let job_path = out.with_extension("job.json");

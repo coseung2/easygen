@@ -94,7 +94,7 @@ pwsh -File tools\install_autograph.ps1
 `<output>.autograph-input.json` 사이드카로 전달하고, 템플릿이 그 경로를 읽습니다.
 
 ```
---renderer autograph --renderer-option template=F:\...\trailer.agp \
+--renderer autograph --renderer-option template=<data-root>/templates/trailer.agp \
   --renderer-option composition=Main --renderer-option video_codec=prores
 ```
 

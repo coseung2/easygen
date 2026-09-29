@@ -6,7 +6,21 @@ import os
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-DATA_ROOT = Path(os.environ.get("MODAL_GUI_DATA_ROOT", REPO_ROOT / "data")).expanduser()
+_configured_data_root = os.environ.get("MODAL_GUI_DATA_ROOT")
+if _configured_data_root:
+    DATA_ROOT = Path(_configured_data_root).expanduser()
+    if not DATA_ROOT.is_absolute():
+        raise ValueError("MODAL_GUI_DATA_ROOT must be an absolute path")
+else:
+    if os.name == "nt":
+        _data_base = os.environ.get("LOCALAPPDATA") or os.environ.get("APPDATA")
+        if not _data_base:
+            _data_base = str(Path.home() / "AppData" / "Local")
+    else:
+        _data_base = os.environ.get("XDG_DATA_HOME", "")
+        if not _data_base or not Path(_data_base).is_absolute():
+            _data_base = str(Path.home() / ".local" / "share")
+    DATA_ROOT = Path(_data_base) / "modal-gui"
 FONT_ROOT = Path(os.environ["MODAL_GUI_FONT_ROOT"]).expanduser() if os.environ.get("MODAL_GUI_FONT_ROOT") else None
 
 

@@ -7,7 +7,7 @@
 - `refs/` 영상 카드. 새 영상은 [_TEMPLATE.md](refs/_TEMPLATE.md)를 복사해 추가하고 아래 표에 한 줄을 넣는다.
 - `synthesis/` [스타일 분류](synthesis/styles.md) · [제작 파이프라인](synthesis/pipelines.md) · [재사용 기법](synthesis/techniques.md)
 - `assets/` 컨택트시트 등 가벼운 증거 이미지.
-- 원본 영상·자막·프레임 등 무거운 원자료는 저장소 밖 `F:\modal-gui\references\`에 둔다. 카드마다 폴더 하나, 일괄 분석은 `batch-<날짜>-<주제>\`로 묶는다.
+- 원본 영상·자막·프레임 등 무거운 원자료는 저장소 밖 `$MODAL_GUI_DATA_ROOT/references/`에 둔다. 카드마다 폴더 하나, 일괄 분석은 `batch-<날짜>-<주제>/`로 묶는다.
 
 원래 분석 문서(2026-09-27 스냅샷)는 그대로 둔다. 카드의 "상세" 링크가 해당 절을 가리킨다.
 
@@ -15,7 +15,7 @@
 - [구글 광고 감성·SaaS 제품 런칭 모션](../2026-09-27-product-launch-motion-references.md)
 - [Modal GUI 홍보영상 트리트먼트](../2026-09-27-modal-gui-promo-treatment.md)
 
-채널 묶음: [SonduckFilm 숏츠 468편](refs/sonduckfilm-shorts.md) (2022-10–2026-09). 원자료는 `F:\modal-gui\references\batch-2026-09-28-sonduckfilm-shorts\`에 있고, 개별 카드는 실제로 쓸 때 작성한다.
+채널 묶음: [SonduckFilm 숏츠 468편](refs/sonduckfilm-shorts.md) (2022-10–2026-09). 원자료는 `$MODAL_GUI_DATA_ROOT/references/batch-2026-09-28-sonduckfilm-shorts/`에 있고, 개별 카드는 실제로 쓸 때 작성한다.
 
 ## 전체 레퍼런스
 

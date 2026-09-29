@@ -71,7 +71,7 @@ prompts/<node-kind>/
   "model": { "provider": "chatgpt-oauth", "name": "...", "temperature": 0.4 },
   "reads": ["docs/research/motion-references/synthesis/techniques.md"],
   "files": { "system.md": "sha256:..." },
-  "origin": "F:\\modal-gui\\lab\\2026-09-28-designer-shortform",
+  "origin": "$MODAL_GUI_DATA_ROOT/lab/<experiment-id>",
   "released_at": "YYYY-MM-DD"
 }
 ```

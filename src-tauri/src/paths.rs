@@ -38,6 +38,13 @@ pub(crate) fn repo_root() -> std::path::PathBuf {
     std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..")
 }
 
+fn configured_root(name: &str) -> Option<PathBuf> {
+    std::env::var_os(name)
+        .filter(|value| !value.is_empty())
+        .map(PathBuf::from)
+        .filter(|path| path.is_absolute())
+}
+
 pub(crate) fn deliverables_root() -> std::path::PathBuf {
     data_root().join("deliverables")
 }
@@ -47,11 +54,11 @@ pub(crate) fn thumbs_root() -> std::path::PathBuf {
 }
 
 pub(crate) fn default_clips_root() -> std::path::PathBuf {
-    data_root().join("h3-clips/generated")
+    configured_root("MODAL_GUI_OUTPUT_ROOT").unwrap_or_else(|| data_root().join("h3-clips/generated"))
 }
 
 pub(crate) fn default_music_root() -> std::path::PathBuf {
-    data_root().join("music")
+    configured_root("MODAL_GUI_MUSIC_ROOT").unwrap_or_else(|| data_root().join("music"))
 }
 
 pub(crate) fn edits_root() -> std::path::PathBuf {

@@ -38,6 +38,18 @@
         "status": "candidate",
         "path": "cast-card-writer/1.0"
       }
+    },
+    "moodboard": {
+      "1.0": {
+        "status": "candidate",
+        "path": "moodboard/1.0"
+      }
+    },
+    "storyboard": {
+      "1.0": {
+        "status": "candidate",
+        "path": "storyboard/1.0"
+      }
     }
   }
 }
