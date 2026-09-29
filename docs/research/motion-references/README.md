@@ -15,10 +15,22 @@
 - [구글 광고 감성·SaaS 제품 런칭 모션](../2026-09-27-product-launch-motion-references.md)
 - [Modal GUI 홍보영상 트리트먼트](../2026-09-27-modal-gui-promo-treatment.md)
 
+채널 묶음: [SonduckFilm 숏츠 468편](refs/sonduckfilm-shorts.md) (2022-10–2026-09). 원자료는 `F:\modal-gui\references\batch-2026-09-28-sonduckfilm-shorts\`에 있고, 개별 카드는 실제로 쓸 때 작성한다.
+
 ## 전체 레퍼런스
+
+2026-09-28 Turing 숏폼에 적용하려고 직접 프레임을 확인한 AE 기술: [Split 전환](refs/_ZFOQClCo6Q-sonduckfilm-split.md), [Warp Zoom](refs/X0szhA37MK4-sonduckfilm-warp.md), [글자 Slice](refs/hyLaMnpZELs-sonduckfilm-slice.md), [키네틱 타이포](refs/O-RxqJrTBa0-sonduckfilm-type.md).
 
 | 카드 | 성격 | 길이·비율 | 게시 | 대표 태그 |
 | --- | --- | --- | --- | --- |
+| [EBS 권력의 맛](refs/yWkK3cg7zU8-short.md) | 교양·사회 설명형 | 1:10.40 · 720×748 | 2026-09 | `text-led` `everyday-analogy` `question-hook` |
+| [G마켓 시력검사·월첫세일](refs/gmarket-eye-test-sale.md) | 실사 상황극 광고 | 0:30.03 · 9:16 | 2026-09 | `character-skit` `pun-naming` `sale-reveal` |
+| [강현 AE 기본기 전후 비교](refs/goodie-land-ae-before-after.md) | 학습 홍보·콜라주 쇼릴 | 0:27.31 · 9:16 | 2026-06 | `before-after` `kinetic-typo` `mixed-media` |
+| [캘린더 픽셀 트랜지션](refs/gasket-love-calendar-pixel.md) | 제품 UI 모션 연습 | 0:16.04 · 16:9 | 2026-09 | `pixel-transition` `focus-zoom` `input-to-result` |
+| [말 잘 듣는 AI](refs/mini-yeoreum-prompt-misread.md) | AI 제작 메타 코미디 | 0:59.63 · 16:9 | 2026-09 | `prompt-misread` `escalating-gag` `reaction-cut` |
+| [딴짓하는 류주임](refs/chris-gomdori-chaotic-intro.md) | RPG 자기소개 · 사용자 선호 | 1:45.71 · 16:9 | 2026-09 | `pixel-rpg` `quest-narrative` `motif-callback` |
+| [SonduckFilm 숏츠 카탈로그](refs/sonduckfilm-shorts.md) | 채널 묶음 468편 | ≤1:20 · 9:16 | 2022-10–2026-09 | `ae-tutorial` `free-ae-project` |
+| [Diverging Line 모션 — SonduckFilm](refs/anBuLtJEZFc-sonduckfilm-diverging-lines.md) | AE 튜토리얼 쇼츠 | 1:20 · 9:16 | 2026-09 | `diverging-lines` `trim-paths` `word-sync-captions` |
 | [신한카드 Simple Plan+](refs/shinhan-simple-plan.md) | 금융 광고 | 0:30 · 16:9 | 2026-03 | `2d-line-drawing` `character-skit` `pun-naming` |
 | [NEPDA 넾 읽을 줄 아세요?](refs/nepda-neop.md) | 세로 쇼츠 광고 | 0:20 · 9:16 | 미확인 | `kinetic-typo` `quiz-hook` `loop` |
 | [디자인하는AI 2D 모션](refs/9uQVYIaYIeg-design-ai-2d-motion.md) | 튜토리얼 | 15:10 | 2026-09 | `pipeline-video-gen` `prompt-spec` |
@@ -30,11 +42,18 @@
 | [LangEase](refs/SgmuplXU2iY-langease.md) | SaaS 런칭 | 0:33 | 2025-06 | `3d-ui-card` `progress-to-done` |
 | [Numtera](refs/awUYikrGsKk-numtera.md) | SaaS 설명 | 1:35 | 2026-01 | `workflow-explainer` |
 | [Lovable 2.0](refs/xDwR1_vrIg8-lovable-2.md) | 제품 출시 | 1:20 | 2025-04 | `gradient-brand-launch` `named-cursors` |
+| [OH FEEL SOME KOREA](refs/Clhfx_VwwJo-oh-feel-some-korea.md) | 전통문화 모션그래픽 작품 | 1:40 · 16:9 | 2025-12 | `morphing-continuity` `central-axis` `spiral-transition` `motif-callback` |
 
 ## 태그로 찾기
 
 | 찾는 것 | 태그 | 카드 |
 | --- | --- | --- |
+| 질문에서 일상 사례·근거로 이어지는 교양 영상 | `editorial-explainer` `text-led` `everyday-analogy` | [EBS 권력의 맛](refs/yWkK3cg7zU8-short.md) |
+| 읽기·말장난으로 행사 공개 | `pun-naming` `sale-reveal` | [G마켓 시력검사](refs/gmarket-eye-test-sale.md) |
+| 전후 비교와 강렬한 타이포 콜라주 | `before-after` `kinetic-typo` `mixed-media` | [강현 AE](refs/goodie-land-ae-before-after.md) |
+| 위젯에서 작업 공간으로 펼치는 UI 모션 | `pixel-transition` `focus-zoom` `input-to-result` | [캘린더 픽셀 트랜지션](refs/gasket-love-calendar-pixel.md) |
+| 수정할수록 엇나가는 AI 코미디 | `prompt-misread` `escalating-gag` `reaction-cut` | [말 잘 듣는 AI](refs/mini-yeoreum-prompt-misread.md) |
+| 게임처럼 전개하는 자기소개·서비스 소개 | `pixel-rpg` `quest-narrative` `npc-testimonials` | [딴짓하는 류주임](refs/chris-gomdori-chaotic-intro.md) |
 | 글자로 훅 거는 쇼츠 | `quiz-hook` `kinetic-typo` `loop` | NEPDA, 쌩초, 디자인하는AI |
 | 브랜드명 말장난 | `pun-naming` | 신한, NEPDA |
 | 제품 UI 시연 | `input-to-result` `3d-ui-card` `named-cursors` | Google Fake, LangEase, Lovable |
@@ -42,6 +61,7 @@
 | 종이·깊이감 | `paper-cutout` `diorama-2.5d` | 원카AI |
 | 강한 팝 그래픽 | `y2k-pop` `3d-lettering` | Sunbeam |
 | AI 제작 파이프라인 | `pipeline-video-gen` `pipeline-image-code` `pipeline-ai-ae` | 디자인하는AI, 원카AI, 쌩초, 코드깎는노인 |
+| AE 라인·경로 모션 | `diverging-lines` `trim-paths` `path-animation` | SonduckFilm |
 
 ## 카드 작성 규칙
 
