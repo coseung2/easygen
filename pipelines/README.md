@@ -30,6 +30,6 @@ released 버전은 고치지 않는다. 바꾸려면 새 버전 폴더를 만든
 
 ## 출시 판정 (제3조 §6, 제5조 §5)
 
-- golden 입력과 결과는 `F:\modal-gui\pipelines\<id>\<ver>\golden-inputs\`, `release-check\`.
+- golden 입력과 결과는 `$MODAL_GUI_DATA_ROOT/pipelines/<id>/<ver>/golden-inputs/`, `release-check/`.
 - 회귀: `python pipelines/_shared/compare.py <approved.mp4> <template.mp4> <report.json>`.
 - 두 템플릿 모두 Lab 합격이 1회라 candidate다. 다른 인물·제품으로 한 번 더 합격하면 released로 올린다.

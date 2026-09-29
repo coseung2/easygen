@@ -1037,14 +1037,14 @@ fn studio_runs_link_the_canvas_to_the_job_pipeline() {
 
     apply_run_event(
         &conn,
-        &json!({"type": "completed", "job_id": "job_test_run", "local_output_path": "F:/modal-gui/h3-clips/generated/clip.mp4"}),
+        &json!({"type": "completed", "job_id": "job_test_run", "local_output_path": "sample-output/clip.mp4"}),
     )
     .unwrap();
     let runs = list_runs(&conn, &project.id).unwrap();
     assert_eq!(runs[0].status, "completed");
     assert_eq!(
         runs[0].output_path.as_deref(),
-        Some("F:/modal-gui/h3-clips/generated/clip.mp4")
+        Some("sample-output/clip.mp4")
     );
 
     // Late worker-exit events must not rewrite finished history.

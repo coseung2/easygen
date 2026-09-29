@@ -1,10 +1,21 @@
 import React from 'react'
 import { Check, Copy, Cpu, FolderOpen, HardDrive, Info, Layers } from 'lucide-react'
-import { revealInExplorer } from '../lib/pipeline'
+import { getStoragePaths, revealInExplorer, type StoragePaths } from '../lib/pipeline'
 import { isTauri } from '../lib/tauri'
 
 export function SettingsPage() {
   const [copiedKey, setCopiedKey] = React.useState('')
+  const [paths, setPaths] = React.useState<StoragePaths | null>(null)
+  const [pathError, setPathError] = React.useState('')
+
+  React.useEffect(() => {
+    if (!isTauri) return
+    let active = true
+    void getStoragePaths()
+      .then((value) => { if (active) setPaths(value) })
+      .catch((error) => { if (active) setPathError(String(error)) })
+    return () => { active = false }
+  }, [])
 
   const copyText = (text: string, key: string) => {
     void navigator.clipboard?.writeText(text)
@@ -19,26 +30,27 @@ export function SettingsPage() {
           <HardDrive size={16} style={{ color: '#a7ef75' }} />
           로컬 스토리지 및 산출물 디렉터리
         </div>
+        {pathError && <div className="inline-warn">저장 경로를 읽지 못했습니다: {pathError}</div>}
         <SettingRow
           label="H3 클립 소재"
-          value="F:\\modal-gui\\h3-clips\\generated"
+          value={paths?.clips ?? (isTauri ? '불러오는 중…' : '데스크톱 앱에서 확인 가능')}
           copied={copiedKey === 'clips'}
-          onCopy={() => copyText('F:\\modal-gui\\h3-clips\\generated', 'clips')}
-          onOpen={() => void revealInExplorer('F:\\modal-gui\\h3-clips\\generated')}
+          onCopy={paths ? () => copyText(paths.clips, 'clips') : undefined}
+          onOpen={paths ? () => void revealInExplorer(paths.clips) : undefined}
         />
         <SettingRow
           label="음악 출력 루트"
-          value="F:\\modal-gui\\music"
+          value={paths?.music ?? (isTauri ? '불러오는 중…' : '데스크톱 앱에서 확인 가능')}
           copied={copiedKey === 'music'}
-          onCopy={() => copyText('F:\\modal-gui\\music', 'music')}
-          onOpen={() => void revealInExplorer('F:\\modal-gui\\music')}
+          onCopy={paths ? () => copyText(paths.music, 'music') : undefined}
+          onOpen={paths ? () => void revealInExplorer(paths.music) : undefined}
         />
         <SettingRow
           label="최종 산출물"
-          value="F:\\modal-gui\\deliverables"
+          value={paths?.deliverables ?? (isTauri ? '불러오는 중…' : '데스크톱 앱에서 확인 가능')}
           copied={copiedKey === 'deliverables'}
-          onCopy={() => copyText('F:\\modal-gui\\deliverables', 'deliverables')}
-          onOpen={() => void revealInExplorer('F:\\modal-gui\\deliverables')}
+          onCopy={paths ? () => copyText(paths.deliverables, 'deliverables') : undefined}
+          onOpen={paths ? () => void revealInExplorer(paths.deliverables) : undefined}
         />
 
         <div className="settings-section-title" style={{ marginTop: 24 }}>

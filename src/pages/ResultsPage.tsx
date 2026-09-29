@@ -15,7 +15,7 @@ export function ResultsPage() {
 
   const loadData = React.useCallback(() => {
     if (!isTauri) {
-      setError('Tauri 앱에서 실행하면 F:\\modal-gui\\deliverables의 실제 파일을 읽어옵니다.')
+      setError('데스크톱 앱에서 실행하면 설정된 저장소의 실제 파일을 읽어옵니다.')
       return
     }
     void listPipelineInputs()

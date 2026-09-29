@@ -5,6 +5,31 @@ from typing import Callable, Any
 DEFAULT_ATTESTATION = "minimax-h3-use-authorized-by-minimax"
 
 
+def data_root() -> Path:
+    configured = os.environ.get("MODAL_GUI_DATA_ROOT", "")
+    if configured:
+        root = Path(configured)
+        if root.is_absolute():
+            return root
+    if os.name == "nt":
+        base = os.environ.get("LOCALAPPDATA") or os.environ.get("APPDATA")
+        if not base:
+            base = str(Path.home() / "AppData" / "Local")
+    else:
+        base = os.environ.get("XDG_DATA_HOME", "")
+        if not base or not Path(base).is_absolute():
+            base = str(Path.home() / ".local" / "share")
+    return Path(base) / "modal-gui"
+
+
+def music_root() -> Path:
+    return Path(os.environ.get("MODAL_GUI_MUSIC_ROOT") or data_root() / "music").expanduser()
+
+
+def output_root() -> Path:
+    return Path(os.environ.get("MODAL_GUI_OUTPUT_ROOT") or data_root() / "h3-clips" / "generated").expanduser()
+
+
 def call_id_of(call: Any) -> str:
     """Modal FunctionCall의 실제 호출 id.
 
@@ -79,15 +104,14 @@ class JobRunner:
             if kind == "music":
                 self.emit({"type":"stage","job_id":job_id,"stage":"AUDIO_DOWNLOADING"})
                 volume = modal.Volume.from_name("yue2-outputs")
-                music_root = Path(os.environ.get("MODAL_GUI_MUSIC_ROOT", r"F:\modal-gui\music")).expanduser()
-                output_path = music_root / "gui" / job_id / Path(remote).name
+                output_path = music_root() / "gui" / job_id / Path(remote).name
                 volume_path = remote
             else:
                 self.emit({"type":"stage","job_id":job_id,"stage":"RESULT_DOWNLOADING"})
                 volume = modal.Volume.from_name("minimax-h3-comfyui-data")
-                output_root = Path(os.environ.get("MODAL_GUI_OUTPUT_ROOT", r"F:\modal-gui\h3-clips\generated")).expanduser()
-                output_root.mkdir(parents=True, exist_ok=True)
-                output_path = unique_path(output_root / Path(remote).name)
+                clips_root = output_root()
+                clips_root.mkdir(parents=True, exist_ok=True)
+                output_path = unique_path(clips_root / Path(remote).name)
                 volume_path = remote if remote.startswith("output/") else f"output/{remote}"
             output_path.parent.mkdir(parents=True, exist_ok=True)
             with output_path.open("wb") as handle:
@@ -120,8 +144,7 @@ class JobRunner:
                 return
             self.emit({"type":"stage","job_id":job_id,"stage":"AUDIO_DOWNLOADING"})
             volume = modal.Volume.from_name("yue2-outputs")
-            music_root = Path(os.environ.get("MODAL_GUI_MUSIC_ROOT", r"F:\modal-gui\music")).expanduser()
-            output_path = music_root / "gui" / job_id / Path(relative).name
+            output_path = music_root() / "gui" / job_id / Path(relative).name
             output_path.parent.mkdir(parents=True, exist_ok=True)
             with output_path.open("wb") as handle:
                 for chunk in volume.read_file(relative):
@@ -167,9 +190,9 @@ class JobRunner:
                 self.emit({"type":"cancelled","job_id":job_id,"message":"원격 생성이 끝났지만 중단 요청되어 결과를 내려받지 않았습니다.","remote_output_path":relative})
                 return
             self.emit({"type":"stage","job_id":job_id,"stage":"RESULT_DOWNLOADING"})
-            output_root = Path(os.environ.get("MODAL_GUI_OUTPUT_ROOT", r"F:\modal-gui\h3-clips\generated")).expanduser()
-            output_root.mkdir(parents=True, exist_ok=True)
-            output_path = unique_path(output_root / Path(relative).name)
+            clips_root = output_root()
+            clips_root.mkdir(parents=True, exist_ok=True)
+            output_path = unique_path(clips_root / Path(relative).name)
             with output_path.open("wb") as handle:
                 for chunk in volume.read_file(f"output/{relative}"):
                     handle.write(chunk)

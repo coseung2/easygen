@@ -32,11 +32,11 @@ App 노드가 id@version으로 참조해 실행
 
 ## 2. 파일 경계
 
-| 트랙 | 저장소 | F 드라이브 |
+| 트랙 | 저장소 | 로컬 데이터 루트 (`$MODAL_GUI_DATA_ROOT`) |
 | --- | --- | --- |
-| Lab | `lab/` 실험 스크립트 (작은 코드만) | `F:\modal-gui\lab\<YYYY-MM-DD>-<이름>\` 소재·중간 결과·최종 영상·실행 기록 |
+| Lab | `lab/` 실험 스크립트 (작은 코드만) | `$MODAL_GUI_DATA_ROOT/lab/<YYYY-MM-DD>-<이름>/` 소재·중간 결과·최종 영상·실행 기록 |
 | App | `src/`, `src-tauri/`, `worker/`, `modal/`, `tools/renderers/` | 앱 데이터 폴더, `studio/`, `exports/` |
-| 공유 (승격된 것) | `pipelines/`, `prompts/`, `docs/` | `F:\modal-gui\pipelines\` 출시 판정 샘플 |
+| 공유 (승격된 것) | `pipelines/`, `prompts/`, `docs/` | `$MODAL_GUI_DATA_ROOT/pipelines/` 출시 판정 샘플 |
 
 - Lab 스크립트는 App 코드를 import해서 써도 된다. App 코드는 `lab/`을 import하지 않는다.
 - Lab 실험은 App의 DB나 프로젝트 파일을 직접 고치지 않는다.
@@ -112,8 +112,8 @@ Lab 실험은 승격할 재료를 남겨야 한다. 실험 폴더에 다음을 �
 ## 6. 현재 미준수 사항 (2026-09-27 코드 기준)
 
 - 캔버스 노드 16종 중 LLM이 판단해야 할 브리프·무드보드·스토리보드·프롬프트 노드는 실행할 수 없는 상태(`executionStage: null`)이고, 노드별 시스템 프롬프트가 없다. AI 채팅(`src-tauri/src/ai_chat.rs`)은 있지만 노드와 연결된 프롬프트는 없다.
-- `lab/`, `prompts/`, `pipelines/`, `F:\modal-gui\lab\`가 아직 없다.
-- 지금까지의 Lab 성격 스크립트가 `tools/`에 섞여 있다. 예: `tools/*_episode_ae.jsx`, `tools/assemble_*_episode.py`, `tools/create_*_plates.py`. 과거 실험 결과는 `F:\modal-gui\series\`, `deliverables\`에 있다. 옮기지 않고 그대로 두며, 새 실험부터 이 조를 따른다. 기존 스크립트 정리는 사용자 확인 후 진행한다.
+- `lab/`, `prompts/`, `pipelines/`, `$MODAL_GUI_DATA_ROOT/lab/`가 아직 없다.
+- 지금까지의 Lab 성격 스크립트가 `tools/`에 섞여 있다. 예: `tools/*_episode_ae.jsx`, `tools/assemble_*_episode.py`, `tools/create_*_plates.py`. 과거 실험 결과는 `$MODAL_GUI_DATA_ROOT/series/`, `$MODAL_GUI_DATA_ROOT/deliverables/`에 있다. 옮기지 않고 그대로 두며, 새 실험부터 이 조를 따른다. 기존 스크립트 정리는 사용자 확인 후 진행한다.
 
 ## 개정 이력
 

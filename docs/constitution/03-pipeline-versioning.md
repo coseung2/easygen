@@ -7,7 +7,7 @@
 ## 1. 현재 상태 (2026-09-27 코드 기준)
 
 - `modal/app.py`는 `kind` 값(`t2v`, `ref2v`, 그 외는 i2v)에 따라 `video_minimax_h3_*.json` 파일 이름을 코드 안에서 고른다. Modal 앱 이름은 `minimax-h3-latest-workflows`다.
-- 워크플로 원본은 `F:\modal-gui\workflows\`(예: `Minimax H3 1M 15S FL2V - Fast ver3.0 - Modal L40S.json`), 배포본은 `F:\modal-gui\remote-workflows\`, API 변환본은 `F:\modal-gui\prepared\`에 있다.
+- 워크플로 원본은 `$MODAL_GUI_DATA_ROOT/workflows/`(예: `Minimax H3 1M 15S FL2V - Fast ver3.0 - Modal L40S.json`), 배포본은 `$MODAL_GUI_DATA_ROOT/remote-workflows/`, API 변환본은 `$MODAL_GUI_DATA_ROOT/prepared/`에 있다.
 - 컨테이너 이미지는 ID로 고정돼 있고, 모델은 Modal Volume `minimax-h3-models`에 있다.
 - DB의 `workflow_definitions` 테이블에는 버전 칸이 없다. `studio_runs`와 `jobs`에도 어떤 파이프라인 버전으로 실행했는지 남지 않는다.
 
@@ -47,12 +47,12 @@
       ├─ workflow.api.json        API 변환본 (해당 시)
       └─ ...                      렌더 스크립트 등 이 버전이 실행하는 파일
 
-F 드라이브  F:\modal-gui\pipelines\<pipeline-id>\<MAJOR.MINOR>\
+로컬 데이터 루트  `$MODAL_GUI_DATA_ROOT/pipelines/<pipeline-id>/<MAJOR.MINOR>/`
 ├─ golden-inputs\                 출시 판정용 고정 입력
 └─ release-check\                 판정 때 만든 결과, 비용·시간 기록
 ```
 
-정의 파일은 작은 텍스트라 git으로 관리한다. 워크플로 JSON은 파일당 약 40–70KB다. 무거운 샘플과 결과만 F 드라이브에 둔다.
+정의 파일은 작은 텍스트라 git으로 관리한다. 워크플로 JSON은 파일당 약 40–70KB다. 무거운 샘플과 결과만 설정된 로컬 데이터 루트에 둔다.
 
 ### manifest.json 필수 항목
 
@@ -128,8 +128,8 @@ candidate를 released로 올리려면 아래를 모두 충족해야 한다.
 
 지금 흩어져 있는 워크플로를 이 규칙으로 옮기는 순서다. 코드 변경이 필요해서 이번 제정에서는 실행하지 않았다.
 
-1. `F:\modal-gui\workflows`, `remote-workflows`, `prepared`의 파일을 대조해 `h3-i2v@3.0`, `h3-ref2v@3.0`, `h3-t2v@3.0`, `h3-fl2v@3.0`을 정한다. 어느 파일이 실제 배포본인지 해시로 확인한다.
-2. `pipelines/`에 매니페스트와 워크플로를 넣고 `registry.json`을 만든다. 원래 F 드라이브 파일은 옮기지 않고 그대로 둔다.
+1. `$MODAL_GUI_DATA_ROOT/workflows/`, `$MODAL_GUI_DATA_ROOT/remote-workflows/`, `$MODAL_GUI_DATA_ROOT/prepared/`의 파일을 대조해 `h3-i2v@3.0`, `h3-ref2v@3.0`, `h3-t2v@3.0`, `h3-fl2v@3.0`을 정한다. 어느 파일이 실제 배포본인지 해시로 확인한다.
+2. `pipelines/`에 매니페스트와 워크플로를 넣고 `registry.json`을 만든다. 원래 로컬 데이터 파일은 옮기지 않고 그대로 둔다.
 3. `workflow_definitions`에 `version`, `status`, `manifest_hash`를 추가하고, `jobs`와 `studio_runs`에 `pipeline_id`, `pipeline_version`을 추가한다.
 4. `modal/app.py`가 파일 이름 대신 `pipeline_id@version`을 받아 해당 매니페스트를 읽게 바꾼다. Modal 앱 이름을 `minimax-h3-latest-workflows`에서 버전이 들어간 이름으로 바꾼다.
 5. YuE2, FFmpeg 렌더러, AE 스크립트를 같은 방식으로 등록한다. AE 스크립트(`tools/*_episode_ae.jsx`)는 에피소드 전용과 재사용 파이프라인을 먼저 구분한다.

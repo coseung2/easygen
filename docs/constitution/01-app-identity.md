@@ -45,6 +45,8 @@ Modal 웹 UI, ComfyUI 화면, 렌더 도구를 오가지 않고 이 흐름을 �
 
 ## 5. 데이터는 어디에 사는가
 
+`MODAL_GUI_DATA_ROOT`는 생성 결과, 원자료, 검증 샘플을 보관하는 사용자가 설정한 로컬 디렉터리다. 각 환경에서 이 변수에 저장소 바깥의 경로를 지정한다. 아래 경로 표기는 이 디렉터리를 기준으로 하며, 해당 데이터는 저장소에 커밋하지 않는다.
+
 | 종류 | 위치 | 규칙 |
 | --- | --- | --- |
 | 코드, 설계 문서, 헌법 | 저장소 (`modal-gui/`) | git으로 관리 |
@@ -52,17 +54,17 @@ Modal 웹 UI, ComfyUI 화면, 렌더 도구를 오가지 않고 이 흐름을 �
 | 파이프라인 정의 | 저장소 `pipelines/` | 매니페스트와 워크플로 JSON, git으로 관리 (제3조) |
 | 노드 프롬프트 | 저장소 `prompts/` | 시스템 프롬프트와 입출력 계약, git으로 관리 (제5조) |
 | Lab 실험 스크립트 | 저장소 `lab/` | 재사용할 만한 작은 코드만. App 코드는 import하지 않음 (제5조) |
-| Lab 실험 결과 | `F:\modal-gui\lab\` | 실험마다 폴더 하나. 소재, 결과, `production.json`, `steps/`, `verdict.md` |
-| 레퍼런스 원자료 | `F:\modal-gui\references\` | 영상·자막·프레임, git 밖 |
-| 파이프라인 검증 샘플 | `F:\modal-gui\pipelines\` | 골든 입력과 출시 판정 결과 |
-| 생성 결과·편집·납품물 | `F:\modal-gui\` (`h3-clips`, `music`, `edits`, `deliverables`, `series` 등) | git 밖 |
+| Lab 실험 결과 | `$MODAL_GUI_DATA_ROOT/lab/` | 실험마다 폴더 하나. 소재, 결과, `production.json`, `steps/`, `verdict.md` |
+| 레퍼런스 원자료 | `$MODAL_GUI_DATA_ROOT/references/` | 영상·자막·프레임, git 밖 |
+| 파이프라인 검증 샘플 | `$MODAL_GUI_DATA_ROOT/pipelines/` | 골든 입력과 출시 판정 결과 |
+| 생성 결과·편집·납품물 | `$MODAL_GUI_DATA_ROOT/` (`h3-clips`, `music`, `edits`, `deliverables`, `series` 등) | git 밖 |
 | 작업 상태·실행 이력 | 앱 데이터 폴더의 SQLite | 코어가 기준 |
 | 자격 증명 | OS 자격 증명 저장소 | 다른 곳에 저장 금지 |
-| 임시 분석 파일 | `%TEMP%` 등 | 보존이 필요하면 작업이 끝나기 전에 F 드라이브로 옮긴다 |
+| 임시 분석 파일 | 시스템 임시 디렉터리 등 | 보존이 필요하면 작업이 끝나기 전에 `$MODAL_GUI_DATA_ROOT` 아래로 옮긴다 |
 
 ## 6. 현재 미준수 사항
 
-- 저장소에 `pipelines/`가 아직 없고, 워크플로는 `F:\modal-gui\workflows`, `F:\modal-gui\remote-workflows`, `F:\modal-gui\prepared`에 흩어져 있다. 이관 계획은 제3조 §8에 있다.
+- 저장소에 `pipelines/`가 아직 없고, 워크플로는 `$MODAL_GUI_DATA_ROOT/workflows/`, `$MODAL_GUI_DATA_ROOT/remote-workflows/`, `$MODAL_GUI_DATA_ROOT/prepared/`에 흩어져 있다. 이관 계획은 제3조 §8에 있다.
 
 ## 개정 이력
 

@@ -3,8 +3,8 @@ import { convertFileSrc } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { ArrowDown, ArrowUp, AudioLines, CircleAlert, FolderOpen, Play, Plus, RefreshCw, Scissors, Trash2, Wand2 } from 'lucide-react'
 import { ThumbGrid } from './Gallery'
-import { DELIVERABLES_ROOT, EDITS_ROOT, analyzeAudio, buildStoryboard, formatBytes, listPipelineInputs, listRenderers, readJsonFile, renderSpec, revealInExplorer, slug, writeJsonFile } from './lib/pipeline'
-import type { Markers, PipelineEvent, PipelineInputs, RendererInfo, Storyboard, StoryboardShot, TextCue } from './lib/pipeline'
+import { childPath, getStoragePaths, analyzeAudio, buildStoryboard, formatBytes, listPipelineInputs, listRenderers, readJsonFile, renderSpec, revealInExplorer, slug, writeJsonFile } from './lib/pipeline'
+import type { Markers, PipelineEvent, PipelineInputs, RendererInfo, StoragePaths, Storyboard, StoryboardShot, TextCue } from './lib/pipeline'
 import { isTauri } from './lib/tauri'
 import { browserCapability } from './ux/stageOne'
 
@@ -36,7 +36,8 @@ export function EditPage() {
   const [loadError, setLoadError] = React.useState('')
   const [notice, setNotice] = React.useState('')
   const [audio, setAudio] = React.useState('')
-  const [clipsRoot, setClipsRoot] = React.useState('F:\\modal-gui\\h3-clips\\generated')
+  const [clipsRoot, setClipsRoot] = React.useState('')
+  const [paths, setPaths] = React.useState<StoragePaths | null>(null)
   const [duration, setDuration] = React.useState(60)
   const [shotSeconds, setShotSeconds] = React.useState(6)
   const [snapCuts, setSnapCuts] = React.useState(true)
@@ -79,15 +80,22 @@ export function EditPage() {
   React.useEffect(() => {
     if (!isTauri) return
     void listRenderers().then(setRenderers).catch(() => undefined)
+    let active = true
+    void getStoragePaths().then((value) => {
+      if (!active) return
+      setPaths(value)
+      setClipsRoot((current) => current || value.clips)
+    }).catch((error) => { if (active) setLoadError(String(error)) })
+    return () => { active = false }
   }, [])
 
   const refresh = React.useCallback(async (root?: string) => {
     if (!isTauri) {
-      setLoadError('Tauri 앱에서 실행하면 F:\\modal-gui의 실제 파일을 읽어옵니다.')
+      setLoadError('데스크톱 앱에서 실행하면 설정된 저장소의 실제 파일을 읽어옵니다.')
       return
     }
     try {
-      const value = await listPipelineInputs(root ?? clipsRoot)
+      const value = await listPipelineInputs((root ?? clipsRoot) || undefined)
       setInputs(value)
       setLoadError('')
       setAudio((current) => current || value.audio[0]?.path || '')
@@ -184,12 +192,13 @@ export function EditPage() {
   }
 
   const onAnalyze = async () => {
+    if (!paths) { setNotice('저장 경로를 읽지 못했습니다.'); return }
     if (!audio) {
       setNotice('음악 트랙을 선택하세요.')
       return
     }
     setNotice('')
-    const output = `${DELIVERABLES_ROOT}\\beats-${slug(audio.split('\\').pop() || 'audio')}-s${sensitivity}.json`
+    const output = childPath(paths.deliverables, `beats-${slug(audio.split('\\').pop() || 'audio')}-s${sensitivity}.json`)
     const id = startRun()
     setMarkersPath(output)
     try {
@@ -200,6 +209,7 @@ export function EditPage() {
   }
 
   const autoFill = async () => {
+    if (!paths) { setNotice('저장 경로를 읽지 못했습니다.'); return null }
     if (!audio) {
       setNotice('음악 트랙을 찾지 못했습니다. 고급 설정에서 트랙을 선택하세요.')
       return null
@@ -210,7 +220,7 @@ export function EditPage() {
     }
     setNotice('')
     const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
-    const target = `${EDITS_ROOT}\\${slug(audioName.replace(/\.[^.]+$/, '') || 'storyboard')}-${stamp}.json`
+    const target = childPath(paths.edits, `${slug(audioName.replace(/\.[^.]+$/, '') || 'storyboard')}-${stamp}.json`)
     const value = await buildStoryboard({
       audio,
       output: target,
@@ -255,6 +265,7 @@ export function EditPage() {
       setNotice(browserCapability('renderLocally').reason)
       return
     }
+    if (!paths) { setNotice('저장 경로를 읽지 못했습니다.'); return }
     if (!audio) {
       setNotice('음악 트랙을 찾지 못했습니다. 고급 설정에서 트랙을 선택하세요.')
       return
@@ -266,7 +277,7 @@ export function EditPage() {
     setNotice('')
     const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
     const extension = renderer === 'autograph' ? 'mov' : 'mp4'
-    const output = `${DELIVERABLES_ROOT}\\trailer-${renderer}-${mode}-${stamp}.${extension}`
+    const output = childPath(paths.deliverables, `trailer-${renderer}-${mode}-${stamp}.${extension}`)
     const metadata = output.replace(/\.(mp4|mov)$/, '.json')
     const id = startRun(active?.execution)
     try {
@@ -398,7 +409,7 @@ export function EditPage() {
         <div className="toolbar">
           <button className="secondary-action" onClick={appendShot}><Plus size={15} />샷 추가</button>
           <button className="secondary-action" disabled={busy} onClick={() => void onRender('base')}><Scissors size={15} />베이스 컷</button>
-          <button className="secondary-action" onClick={() => void revealInExplorer(DELIVERABLES_ROOT)}><FolderOpen size={15} />산출물 폴더</button>
+          <button className="secondary-action" disabled={!paths} onClick={() => { if (paths) void revealInExplorer(paths.deliverables) }}><FolderOpen size={15} />산출물 폴더</button>
           {last?.artifact && (
             <button className="secondary-action" onClick={() => void revealInExplorer(last.artifact!)}><FolderOpen size={15} />준비된 스크립트</button>
           )}

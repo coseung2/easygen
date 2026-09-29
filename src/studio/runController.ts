@@ -8,10 +8,13 @@ import {
   generateColorClip,
   generateSilence,
   generateStillClip,
+  getStoragePaths,
+  childPath,
   readJsonFile,
   renderSpec,
   writeJsonFile,
   type PipelineEvent,
+  type StoragePaths,
 } from '../lib/pipeline'
 import {
   buildMotionSpec,
@@ -32,11 +35,8 @@ import { useStudioStore } from './store'
 import { checkToolCall } from './toolInput'
 import { isActiveRun, isTerminalRun, uid, type PortType, type StudioAsset, type StudioNode, type StudioRunRow } from './types'
 
-const EDITS_ROOT = 'F:\\modal-gui\\edits'
-const STUDIO_ROOT = 'F:\\modal-gui\\studio'
-
-function studioArtifactPath(projectId: string, name: string): string {
-  return `${STUDIO_ROOT}\\${projectId}\\artifacts\\${name}`
+function studioArtifactPath(paths: StoragePaths, projectId: string, name: string): string {
+  return childPath(paths.studio, projectId, 'artifacts', name)
 }
 
 export interface StartResult {
@@ -371,7 +371,7 @@ export async function cuesFromSpecAssets(assets: StudioAsset[]): Promise<TypoCue
   return cues.sort((left, right) => left.start - right.start)
 }
 
-async function startEditRun(node: StudioNode): Promise<StartResult> {
+async function startEditRun(node: StudioNode, paths: StoragePaths): Promise<StartResult> {
   const doc = useStudioStore.getState().doc
   const videos = incomingAssets(node.id, ['video'])
   const audio = incomingAssets(node.id, ['audio'])[0]
@@ -422,8 +422,8 @@ async function startEditRun(node: StudioNode): Promise<StartResult> {
     return { ok: false, reason: String(error) }
   }
 
-  const specPath = `${EDITS_ROOT}\\${run.id}-spec.json`
-  const outputPath = `${EDITS_ROOT}\\${run.id}.mp4`
+  const specPath = childPath(paths.edits, `${run.id}-spec.json`)
+  const outputPath = childPath(paths.edits, `${run.id}.mp4`)
   const spec = {
     name: run.id,
     audio: audio.storedPath,
@@ -457,7 +457,7 @@ async function startEditRun(node: StudioNode): Promise<StartResult> {
  * 타이포·모션 노드 실행(문서 8장). 정확한 문구는 편집 가능한 텍스트 레이어로
  * 렌더하고, 구성(MotionSpec)을 프로젝트 폴더에 남겨 다음 노드가 다시 쓴다.
  */
-async function startGraphicsRun(node: StudioNode, kind: 'typo' | 'motion'): Promise<StartResult> {
+async function startGraphicsRun(node: StudioNode, kind: 'typo' | 'motion', paths: StoragePaths): Promise<StartResult> {
   const state = useStudioStore.getState()
   const projectId = state.projectId
   const duration = Math.max(0.5, configNumber(node, 'seconds') ?? (kind === 'typo' ? 6 : 8))
@@ -521,8 +521,8 @@ async function startGraphicsRun(node: StudioNode, kind: 'typo' | 'motion'): Prom
     return { ok: false, reason: String(error) }
   }
 
-  const specPath = studioArtifactPath(projectId, `${run.id}.motion.json`)
-  const outputPath = `${EDITS_ROOT}\\${run.id}.mp4`
+  const specPath = studioArtifactPath(paths, projectId, `${run.id}.motion.json`)
+  const outputPath = childPath(paths.edits, `${run.id}.mp4`)
   try {
     const shots: MotionShot[] = []
     if (video?.storedPath) {
@@ -532,19 +532,19 @@ async function startGraphicsRun(node: StudioNode, kind: 'typo' | 'motion'): Prom
       if (usable.length > 0) {
         const per = Number((duration / usable.length).toFixed(3))
         for (const [index, asset] of usable.entries()) {
-          const clip = studioArtifactPath(projectId, `${run.id}-still-${index + 1}.mp4`)
+          const clip = studioArtifactPath(paths, projectId, `${run.id}-still-${index + 1}.mp4`)
           await generateStillClip(clip, asset.storedPath, per, width, height)
           shots.push({ clip, in: 0, out: per })
         }
       } else {
-        const clip = studioArtifactPath(projectId, `${run.id}-background.mp4`)
+        const clip = studioArtifactPath(paths, projectId, `${run.id}-background.mp4`)
         await generateColorClip(clip, duration, width, height, '#101418')
         shots.push({ clip, in: 0, out: Number(duration.toFixed(3)) })
       }
     }
     const audioPath = audio?.storedPath
       ? audio.storedPath
-      : await generateSilence(studioArtifactPath(projectId, `${run.id}-silence.wav`), duration)
+      : await generateSilence(studioArtifactPath(paths, projectId, `${run.id}-silence.wav`), duration)
     const motion = buildMotionSpec({
       name: run.id,
       width,
@@ -671,7 +671,7 @@ export function fileCandidates(value: unknown, found: Set<string> = new Set<stri
   return found
 }
 
-async function startToolRun(node: StudioNode): Promise<StartResult> {
+async function startToolRun(node: StudioNode, paths: StoragePaths): Promise<StartResult> {
   const connectionId = configText(node, 'connection')
   const tool = configText(node, 'tool')
   if (!connectionId) {
@@ -713,7 +713,7 @@ async function startToolRun(node: StudioNode): Promise<StartResult> {
 
   try {
     const result = await callConnectionTool(connectionId, tool, args)
-    const resultPath = `F:\\modal-gui\\studio\\${state.projectId}\\artifacts\\${run.id}.json`
+    const resultPath = studioArtifactPath(paths, state.projectId, `${run.id}.json`)
     await writeJsonFile(resultPath, { connectionId, tool, arguments: args, result })
 
     // 도구가 오류를 돌려줬으면 성공으로 기록하지 않는다.
@@ -780,7 +780,7 @@ export function toolErrorMessage(result: unknown): string {
  * 영상 템플릿 노드 실행. 템플릿(pipelines/<id>/<ver>)은 입력 JSON만 받아 이 컴퓨터에서
  * 렌더하고, 진행 이벤트는 다른 로컬 렌더와 같은 pipeline-event로 들어온다.
  */
-async function startTemplateRun(node: StudioNode): Promise<StartResult> {
+async function startTemplateRun(node: StudioNode, paths: StoragePaths): Promise<StartResult> {
   const ref = configText(node, 'template')
   if (!ref) return { ok: false, reason: '템플릿을 고르세요.' }
   const templates = await listTemplates()
@@ -814,7 +814,7 @@ async function startTemplateRun(node: StudioNode): Promise<StartResult> {
   } catch (error) {
     return { ok: false, reason: String(error) }
   }
-  const outputPath = studioArtifactPath(state.projectId, `${run.id}.mp4`)
+  const outputPath = studioArtifactPath(paths, state.projectId, `${run.id}.mp4`)
   try {
     localRuns.set(run.id, { nodeId: node.id, outputPath })
     await renderTemplate({ run_id: run.id, template: ref, job, output: outputPath })
@@ -865,11 +865,19 @@ export async function startStudioRun(nodeId: string): Promise<StartResult> {
   if (node.kind === 'video') return startModalVideoRun(node)
   if (node.kind === 'comfy') return startComfyRun(node)
   if (node.kind === 'audio') return startMusicRun(node)
-  if (node.kind === 'edit') return startEditRun(node)
-  if (node.kind === 'typo') return startGraphicsRun(node, 'typo')
-  if (node.kind === 'motion') return startGraphicsRun(node, 'motion')
-  if (node.kind === 'tool') return startToolRun(node)
-  if (node.kind === 'template') return startTemplateRun(node)
+  if (['edit', 'typo', 'motion', 'tool', 'template'].includes(node.kind)) {
+    let paths: StoragePaths
+    try {
+      paths = await getStoragePaths()
+    } catch (error) {
+      return { ok: false, reason: `저장 경로를 읽지 못했습니다: ${String(error)}` }
+    }
+    if (node.kind === 'edit') return startEditRun(node, paths)
+    if (node.kind === 'typo') return startGraphicsRun(node, 'typo', paths)
+    if (node.kind === 'motion') return startGraphicsRun(node, 'motion', paths)
+    if (node.kind === 'tool') return startToolRun(node, paths)
+    if (node.kind === 'template') return startTemplateRun(node, paths)
+  }
   return { ok: false, reason: `${spec.label} 노드의 실행은 아직 연결되지 않았습니다.` }
 }
 

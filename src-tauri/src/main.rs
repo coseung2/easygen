@@ -11,6 +11,7 @@ mod pipeline;
 mod studio;
 mod studio_export;
 mod studio_run;
+mod storage_paths;
 mod studio_templates;
 mod templates;
 mod usage;
@@ -60,6 +61,7 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             health,
+            storage_paths::storage_paths,
             jobs::create_job,
             jobs::start_job,
             jobs::start_music,
