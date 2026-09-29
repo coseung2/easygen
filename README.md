@@ -25,6 +25,8 @@ ffprobe -version
 & .\.venv\Scripts\python.exe -m pip install "rembg[cpu]==2.0.67"
 ```
 
+`local-freeze-cast@1.0`과 `local-launch-spoof@1.0`은 `pipelines/_shared/cutout.py`를 통해 누끼를 만듭니다. 기본값 `bria-rmbg`는 첫 실행 때 ONNX 모델을 내려받고 CC BY-NC 4.0이므로 비상업 용도에만 사용합니다. 상업 사용은 작업 JSON에서 `cutout_model`을 `birefnet-general`(MIT)로 지정하고 모델 취득과 결과 품질을 확인합니다.
+
 이는 공통 도구 설치이며 모든 과거 영상의 환경을 고정한 lockfile은 아닙니다. 개별 실험의 추가 의존성도 확인하고, 설치 버전은 `python -m pip freeze`로 로컬 실행 기록에 남깁니다.
 
 ## 2. 작업 폴더와 폰트
@@ -109,6 +111,7 @@ H3의 `Image.from_id(...)`는 기존 Workspace 이미지에 의존하며, 컨테
 - [YuE2-3B](https://huggingface.co/m-a-p/YuE2-3B), [YuE2-Vae](https://huggingface.co/m-a-p/YuE2-Vae): 음악 생성. 코드가 revision을 고정하지 않아 과거 모델과 동일한지는 미확인입니다.
 - [Qwen-Image-2.1](https://huggingface.co/Comfy-Org/Qwen-Image-2.1): 실험 코드의 revision은 `9a44dbdb47cefd046be9c0a13476192f34c8db8e`입니다.
 - [ComfyUI](https://github.com/Comfy-Org/ComfyUI), [VideoHelperSuite](https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite), [H3 Upscaler 노드](https://github.com/LBH-123-AI/Comfyui_Minimax_h3_latent_Upscaler), [H3 Optimizations](https://github.com/Zironic/H3-Optimizations), [Deno 노드](https://github.com/Deno2026/comfyui-deno-custom-nodes): 코드가 참조하는 custom node입니다. 링크만으로 버전 호환성이 보장되지는 않습니다.
+- [BRIA RMBG 2.0](https://huggingface.co/briaai/RMBG-2.0), [BiRefNet](https://huggingface.co/ZhengPeng7/BiRefNet): 로컬 누끼 모델의 출처입니다. 모델별 라이선스와 상업 사용 조건을 확인합니다.
 
 가중치는 Git에 넣지 않습니다. 출처·revision·파일 해시·이용 조건을 확인해 준비합니다. 기존 제작자의 별도 이용 허가는 클론 사용자에게 자동 이전되지 않습니다.
 
@@ -129,7 +132,7 @@ H3의 `Image.from_id(...)`는 기존 Workspace 이미지에 의존하며, 컨테
 
 ## 자료와 재현 상태
 
-- [파이프라인 목록](pipelines/README.md) · [노드 프롬프트](prompts/) · [ComfyUI 그래프 스냅샷](workflows/comfyui/README.md)
+- [파이프라인 목록](pipelines/README.md) · [노드 프롬프트](prompts/) · [ComfyUI 그래프와 catalog.json](workflows/comfyui/README.md)
 - [제작 지침](.codex/skills/video-production/SKILL.md) · [창작 원칙](docs/creative/README.md)
 - [Lab 재현 의존성과 공개 선별표](docs/reproducibility/lab-selection.md)
 - [저장소 규칙](docs/constitution/README.md)
