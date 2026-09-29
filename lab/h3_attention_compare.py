@@ -16,11 +16,13 @@ import urllib.request
 import uuid
 from pathlib import Path
 
+REPO = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO))
+
 import modal
 from tools.lab_paths import lab_path
 
 
-REPO = Path(__file__).resolve().parents[1]
 SOURCE = lab_path("2026-09-28-turing-enigma", "v7")
 RESULTS = lab_path("2026-09-29-h3-attention-compare")
 WORKFLOW = RESULTS / "source-r2v.json"

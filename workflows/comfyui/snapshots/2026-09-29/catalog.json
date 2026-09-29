@@ -1,0 +1,81 @@
+{
+    "schema_version":  1,
+    "captured_date":  "2026-09-29",
+    "status":  "archived-local-snapshots",
+    "live_deployment_verified":  false,
+    "notes":  "Local UI originals, prepared API graphs and local deployment copies. No remote Volume comparison was performed during publication. These are not one executable pipeline version.",
+    "files":  [
+                  {
+                      "path":  "ui/fl2v-fast-3.0.json",
+                      "source":  "workflows/Minimax H3 1M 15S FL2V - Fast ver3.0.json",
+                      "sha256":  "1070b4102668e97d5f2600ea043a0a340b36cba688dc34bc475af4010d70e0a1",
+                      "bytes":  66908
+                  },
+                  {
+                      "path":  "ui/fl2v-fast-3.0-l40s.json",
+                      "source":  "workflows/Minimax H3 1M 15S FL2V - Fast ver3.0 - Modal L40S.json",
+                      "sha256":  "2c22dc76c209ac2529631e991a3298eae2d39581d6edd05508317d5c0d0e181a",
+                      "bytes":  66908
+                  },
+                  {
+                      "path":  "ui/ref2v-fast-3.0.json",
+                      "source":  "workflows/Minimax H3 1M 15S Ref2V - Fast ver3.0.json",
+                      "sha256":  "8bea4a5dfe88a752a7bfb096f98b984a7f40a631a53fc53f1d16489090ac31e5",
+                      "bytes":  62751
+                  },
+                  {
+                      "path":  "ui/ref2v-fast-3.0-l40s.json",
+                      "source":  "workflows/Minimax H3 1M 15S Ref2V - Fast ver3.0 - Modal L40S.json",
+                      "sha256":  "fa6d0d299dd521f61642542bd48776edbe78964ebe72999223c95a4c06da62bf",
+                      "bytes":  62751
+                  },
+                  {
+                      "path":  "deployment-copies/video_minimax_h3_i2v.json",
+                      "source":  "remote-workflows/video_minimax_h3_i2v.json",
+                      "sha256":  "5ce819b192eeafa3923801d017ebb17e370c4984a07c2bccd25643cb5e9701ab",
+                      "bytes":  66906
+                  },
+                  {
+                      "path":  "deployment-copies/video_minimax_h3_r2v.json",
+                      "source":  "remote-workflows/video_minimax_h3_r2v.json",
+                      "sha256":  "fa6d0d299dd521f61642542bd48776edbe78964ebe72999223c95a4c06da62bf",
+                      "bytes":  62751
+                  },
+                  {
+                      "path":  "deployment-copies/video_minimax_h3_t2v.json",
+                      "source":  "remote-workflows/video_minimax_h3_t2v.json",
+                      "sha256":  "3a7afbcbcec7550e1ad626bbfeb476a7f3485ab4c03941abc71a935729be5fd4",
+                      "bytes":  43739
+                  },
+                  {
+                      "path":  "deployment-copies/deployed-r2v.json",
+                      "source":  "remote-workflows/deployed-r2v.json",
+                      "sha256":  "fa6d0d299dd521f61642542bd48776edbe78964ebe72999223c95a4c06da62bf",
+                      "bytes":  62751
+                  },
+                  {
+                      "path":  "api/fl2v-api.json",
+                      "source":  "prepared/fl2v-api.json",
+                      "sha256":  "96b6ddd7b2ec41e706ce8e460c1f5f5dbe336ad5bdebb40df8e4085164fde26e",
+                      "bytes":  10070
+                  },
+                  {
+                      "path":  "api/fl2v-l40s-api.json",
+                      "source":  "prepared/fl2v-l40s-api.json",
+                      "sha256":  "c6da3c598369068775cf134a384c24d34bf1b4660a290a155c08a741e8588489",
+                      "bytes":  9697
+                  },
+                  {
+                      "path":  "api/ref2v-api.json",
+                      "source":  "prepared/ref2v-api.json",
+                      "sha256":  "218e771dc1e223eeefee494996943b572361068cb747cbae26e9226eece1f5e7",
+                      "bytes":  10348
+                  },
+                  {
+                      "path":  "api/ref2v-l40s-api.json",
+                      "source":  "prepared/ref2v-l40s-api.json",
+                      "sha256":  "a9e68bb97217dabb522dc8e48fc25d08bcc445d6363d681cdcf530cd4496c12e",
+                      "bytes":  9975
+                  }
+              ]
+}
