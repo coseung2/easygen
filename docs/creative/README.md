@@ -11,6 +11,8 @@
 5. `transition-grammar.md`와 `rhythm-and-sound.md`가 장면 사이의 시간적 연결을 설계한다.
 6. 그 결과를 기존 헌법의 레퍼런스·실행 경로·버전 규칙에 넘긴다.
 
+콘셉트·톤·음악·전환 방향은 [approved-directions.md](approved-directions.md)의 승인된 항목만 고정값으로 쓰고, 나머지는 요청마다 새로 추천한다.
+
 도메인별 문서는 이 과정을 대체하지 않고 사실 검증, 관습, 금지사항을 보충한다.
 
 ## 핵심 원칙

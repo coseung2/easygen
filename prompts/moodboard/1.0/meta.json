@@ -1,0 +1,28 @@
+{
+  "id": "moodboard",
+  "version": "1.0",
+  "status": "candidate",
+  "inputs": {
+    "topic": "Text",
+    "refs": "Image[]"
+  },
+  "output": {
+    "type": "Json",
+    "schema": "schema.json"
+  },
+  "model": {
+    "provider": "chatgpt-oauth",
+    "name": null,
+    "temperature": 0.6
+  },
+  "reads": [
+    "docs/creative/approved-directions.md",
+    "docs/research/motion-references/refs/"
+  ],
+  "files": {
+    "schema.json": "sha256:4ff9c8e4f3fa75ad787128909a4dbbff2ca9bd2ea856b6ac61b023096aa4018b",
+    "system.md": "sha256:3216f86925f22861633830b964c3a629b0a9d92fd32042ea8ef8be000cfdb0f0"
+  },
+  "origin": "사용자 지시 (2026-09-28) — 승격 전, Lab 적용 대기",
+  "released_at": null
+}

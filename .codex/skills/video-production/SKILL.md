@@ -16,7 +16,7 @@ description: Plan and produce Modal GUI videos — shortform, ads, motion graphi
 - `docs/constitution/05-two-tracks.md` §4 Lab 기록 규칙
 - `docs/research/motion-references/README.md` 전체 목록과 태그표
 
-`prompts/`에 해당 단계의 released 노드 프롬프트가 있으면 그 `system.md`를 따르고 버전을 기록한다. 없으면 이 스킬의 기준으로 진행한다.
+`prompts/`에 해당 단계의 노드 프롬프트(released 또는 candidate)가 있으면 그 `system.md`를 따르고 `id@version`을 기록한다. 없으면 이 스킬의 기준으로 진행한다.
 
 요청에 맞는 카드만 `refs/`에서 열고, 조합할 규칙은 `synthesis/styles.md`, `synthesis/techniques.md`에서 필요한 표만 본다. 카드를 전부 읽지 않는다.
 
@@ -35,9 +35,12 @@ description: Plan and produce Modal GUI videos — shortform, ads, motion graphi
 ## 3. 콘셉트
 
 - 태그로 카드 2–4장을 고른다. 훅, 스타일, 리듬, 마무리를 서로 다른 카드에서 가져와도 된다.
+- 방향 후보는 `docs/creative/approved-directions.md`의 승인된 방향 중 요청에 맞는 것과, 이번 요청에 맞춰 새로 추천한 것으로 만든다. 고정된 예시 목록을 기본값으로 쓰지 않는다. 완성본이 합격하면 쓴 방향을 그 파일에 추가한다.
 - 한 작품을 통째로 따라 하지 않는다. 카드의 "가져올 것"에서 규칙을 뽑고, "피할 것"을 계획에 반영한다.
 - 타 브랜드의 로고, 캐릭터, 문구를 그대로 쓰지 않는다. 구조와 기법만 가져온다.
 - 방향이 둘 이상 가능하면 한 줄짜리 대안 1–2개를 함께 제시한다.
+
+무드보드는 `prompts/moodboard/` 양식을 따른다. 주제의 대표 장면 하나를 고정하고 톤만 바꾼 6시안을 **생성 한 번으로 만든 그리드 한 장**(`boards/moodboard-grid.png`)으로 만들어 번호로 고르게 한다. 승인된 시안은 같은 톤으로 풀프레임 한 장(`boards/ref-<n>.png`)을 다시 뽑아 스토리보드·제작 단계의 레퍼런스로 넘긴다.
 
 ## 4. 샷 계획을 보여주고 멈춘다
 
@@ -49,11 +52,13 @@ description: Plan and produce Modal GUI videos — shortform, ads, motion graphi
 - 폰트, 팔레트, 음악 선택
 - 가정한 것
 
+샷 계획에는 `prompts/storyboard/` 양식의 스토리보드를 붙인다. 클립 수는 유동이고, 클립마다 키네틱 타이포 시안(A)과 MiniMax H3 시안(B)을 둘 다 그린 **생성 한 번의 2열 보드**(`boards/storyboard.png`)로 낸다. 승인된 클립은 A·B 풀프레임 패널(A = 키네틱 목표 프레임, B = H3 `ref2v` 입력)을 따로 만들어 다음 단계 레퍼런스로 넘긴다.
+
 3·4단계 샷이 하나라도 있으면 승인을 받기 전에 유료 실행을 하지 않는다. 모든 샷이 1·2단계면 계획을 보여준 뒤 바로 제작에 들어가도 된다. 단, 사용자가 계획만 원한다고 했으면 멈춘다.
 
 ## 5. 제작
 
-- 작업 폴더: `F:\modal-gui\lab\<YYYY-MM-DD>-<짧은-이름>\`. 소재, 중간 결과, 최종본을 여기에 둔다. 재사용할 만한 스크립트는 저장소 `lab/<같은-이름>/`에 두고, 일회성 스크립트는 작업 폴더에 둔다.
+- 작업 폴더: `$MODAL_GUI_DATA_ROOT/lab/<YYYY-MM-DD>-<짧은-이름>/`. 소재, 계획 보드(`boards/`), 중간 결과, 최종본을 여기에 둔다. 재사용할 만한 스크립트는 저장소 `lab/<같은-이름>/`에 두고, 일회성 스크립트는 작업 폴더에 둔다.
 - 1단계: 기존 도구를 먼저 쓴다. `tools/renderers/ffmpeg_renderer.py`, `tools/motion_graphics_pipeline.py`. FFmpeg 함정은 `docs/renderer-plugins.md`에 있다 (`fontsize` 표현식과 `blend all_expr` 금지).
 - 2단계: AE 스크립트는 `tools/*_ae.jsx` 선례를 참고하되, 에피소드 전용 코드를 그대로 복사하지 않는다.
 - 4단계: `tools/run_modal_h3_clip.py`, `tools/run_yue2_music.py`. 승인된 호출 수를 넘기지 않는다.

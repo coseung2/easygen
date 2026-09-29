@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "storyboard@1.0/output",
+  "type": "object",
+  "required": ["format", "clips", "references"],
+  "properties": {
+    "references": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "used_by"],
+        "properties": {
+          "path": { "type": "string" },
+          "used_by": { "type": "string" }
+        }
+      }
+    },
+    "format": {
+      "type": "object",
+      "required": ["aspect", "seconds"],
+      "properties": {
+        "aspect": { "enum": ["9:16", "16:9", "1:1"] },
+        "seconds": { "type": "number" },
+        "fps": { "type": "integer" }
+      }
+    },
+    "clips": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "t", "role", "kinetic", "h3", "route"],
+        "properties": {
+          "id": { "type": "string" },
+          "t": { "type": "string" },
+          "role": { "enum": ["hook", "develop", "transition", "ending"] },
+          "copy": { "type": "string" },
+          "kinetic": {
+            "type": "object",
+            "required": ["treatment"],
+            "properties": {
+              "treatment": { "type": "string" },
+              "font": { "type": "string" },
+              "beat": { "type": "string" },
+              "panel": { "type": "string" }
+            }
+          },
+          "h3": {
+            "type": "object",
+            "required": ["subject", "reference"],
+            "properties": {
+              "subject": { "type": "string" },
+              "motion": { "type": "string" },
+              "camera": { "type": "string" },
+              "reference": { "enum": ["ref2v", "i2v", "t2v", "reuse"] },
+              "prompt": { "type": "string" },
+              "calls": { "type": "integer" },
+              "panel": { "type": "string" }
+            }
+          },
+          "route": { "enum": ["kinetic", "h3", "mix"] },
+          "paid": { "type": "boolean" }
+        }
+      }
+    }
+  }
+}
