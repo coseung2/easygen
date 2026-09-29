@@ -9,7 +9,6 @@ import sys
 from pathlib import Path
 
 import modal
-from lab_paths import data_path
 
 DEFAULT_ATTESTATION = "minimax-h3-use-authorized-by-minimax"
 

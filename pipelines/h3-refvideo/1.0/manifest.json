@@ -24,7 +24,7 @@
     "model_hashes_verified": false
   },
   "files": {
-    "test_worker.py": "sha256:311788661d4b60aa797497c2ccae006771ebf347c5f4127f92caaf005ad4a5a6",
+    "test_worker.py": "sha256:f3cd9914b1371eca176116504fdaf06f7724bf0a9d792cd35ecd623b8d834d98",
     "worker.py": "sha256:5ed530a2429708f2d6cf39188ebc0ce6f180e81ea36bb55806ecf460dfa7d986",
     "workflow.ui.json": "sha256:a5d171036908e31b7b388473bc300460f98aa5a7783c38d6a608f262d1f54f7d"
   },

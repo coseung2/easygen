@@ -6,15 +6,7 @@ import os
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-_configured = os.environ.get("MODAL_GUI_DATA_ROOT")
-if _configured:
-    DATA_ROOT = Path(_configured).expanduser()
-    if not DATA_ROOT.is_absolute():
-        raise ValueError("MODAL_GUI_DATA_ROOT must be an absolute path outside the repository")
-elif os.name == "nt":
-    DATA_ROOT = Path(os.environ.get("LOCALAPPDATA") or Path.home() / "AppData/Local") / "modal-gui"
-else:
-    DATA_ROOT = Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local/share") / "modal-gui"
+DATA_ROOT = Path(os.environ.get("MODAL_GUI_DATA_ROOT", REPO_ROOT / "data")).expanduser()
 FONT_ROOT = Path(os.environ["MODAL_GUI_FONT_ROOT"]).expanduser() if os.environ.get("MODAL_GUI_FONT_ROOT") else None
 
 

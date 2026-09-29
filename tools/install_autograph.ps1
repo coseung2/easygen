@@ -14,6 +14,9 @@
 .EXAMPLE
   pwsh -File tools\install_autograph.ps1
 
+.EXAMPLE
+  어느 폴더에서든 절대 경로로 실행할 수 있습니다.
+  pwsh -File tools\install_autograph.ps1
 #>
 
 [CmdletBinding()]

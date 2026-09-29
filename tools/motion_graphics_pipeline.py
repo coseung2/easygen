@@ -27,7 +27,6 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from tools.lab_paths import data_path
 
 from tools.renderers import (  # noqa: E402
     RenderRequest,
