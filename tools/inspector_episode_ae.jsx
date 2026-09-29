@@ -1,5 +1,5 @@
 (function(){
-var root="F:/modal-gui/series/05-secret-inspector",project=root+"/ae/05-secret-inspector-master.aep",output=root+"/ae/05-secret-inspector-master.avi",log=root+"/ae/05-secret-inspector-master.log";
+var dataRoot=$.getenv("MODAL_GUI_DATA_ROOT")||new File($.fileName).parent.parent.fsName+"/data",root=dataRoot+"/series/05-secret-inspector",project=root+"/ae/05-secret-inspector-master.aep",output=root+"/ae/05-secret-inspector-master.avi",log=root+"/ae/05-secret-inspector-master.log";
 var W=1920,H=1080,FPS=24,SHOT=5,ivory=[0.96,0.91,0.78],gold=[0.9,0.68,0.28],ink=[0.07,0.07,0.09];
 var captions=[["암행어사는","신분을 숨기고 다녔어요"],["남루한 옷으로","사람들 속에 섞였어요"],["소문을 모으고","현장을 살폈어요"],["임무를 마치면","기록을 올렸어요"],["마패는 신분을","증명하는 표식"],["마지막 순간","정체를 드러냈어요"]];
 var clips=[root+"/clips/c1.mp4",root+"/clips/c2.mp4",root+"/clips/c3.mp4",root+"/clips/c4.mp4",root+"/clips/c5.mp4",root+"/clips/c6.mp4"];

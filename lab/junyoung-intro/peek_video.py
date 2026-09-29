@@ -6,12 +6,15 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
-WORK = Path('F:/modal-gui/lab/2026-09-28-junyoung-intro')
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'tools'))
+from lab_paths import font_path, lab_path
+
+WORK = lab_path('2026-09-28-junyoung-intro')
 ix = json.load(open(WORK / 'data' / 'media_index.json', encoding='utf-8'))
 picks = [int(a) for a in sys.argv[2:]]
 fr = [0.05, 0.2, 0.35, 0.5, 0.65, 0.8, 0.95]
 cw, ch = 200, 260
-font = ImageFont.truetype('C:/Windows/Fonts/malgunbd.ttf', 18)
+font = ImageFont.truetype(str(font_path('malgunbd.ttf', 'malgun.ttf')), 18)
 sheet = Image.new('RGB', (len(fr) * cw + 110, len(picks) * ch), (20, 20, 20))
 d = ImageDraw.Draw(sheet)
 for row, i in enumerate(picks):

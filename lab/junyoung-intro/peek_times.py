@@ -10,12 +10,15 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
-WORK = Path('F:/modal-gui/lab/2026-09-28-junyoung-intro')
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'tools'))
+from lab_paths import font_path, lab_path
+
+WORK = lab_path('2026-09-28-junyoung-intro')
 ix = json.load(open(WORK / 'data' / 'media_index.json', encoding='utf-8'))
 out, idx, times = sys.argv[1], int(sys.argv[2]), [float(t) for t in sys.argv[3:]]
 src = WORK / 'sources' / ix[idx]['file']
 cw, ch = 300, 533
-font = ImageFont.truetype('C:/Windows/Fonts/malgunbd.ttf', 24)
+font = ImageFont.truetype(str(font_path('malgunbd.ttf', 'malgun.ttf')), 24)
 sheet = Image.new('RGB', (cw * len(times), ch + 36), (20, 20, 20))
 d = ImageDraw.Draw(sheet)
 for k, t in enumerate(times):

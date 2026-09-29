@@ -1,6 +1,7 @@
 /* Native 30-second editorial rainbow pilot. Run in an empty AE 2021 instance. */
 (function () {
-  var root = "F:/modal-gui/series/08-rainbow";
+  var dataRoot = $.getenv("MODAL_GUI_DATA_ROOT") || new File($.fileName).parent.parent.fsName + "/data";
+  var root = dataRoot + "/series/08-rainbow";
   var projectFile = new File(root + "/out/rainbow-editorial-v3.aep");
   var logFile = new File(root + "/out/rainbow-editorial-v3.log");
   var renderFile = new File(root + "/out/rainbow-editorial-v3.avi");

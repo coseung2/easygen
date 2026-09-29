@@ -12,7 +12,10 @@ from rembg import new_session, remove
 sys.path.insert(0, str(Path(__file__).parent))
 from sticker import clean_alpha, make_sticker  # noqa: E402
 
-WORK = Path('F:/modal-gui/lab/2026-09-28-junyoung-intro')
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'tools'))
+from lab_paths import font_path, lab_path
+
+WORK = lab_path('2026-09-28-junyoung-intro')
 ix = json.load(open(WORK / 'data' / 'media_index.json', encoding='utf-8'))
 
 # (media index, freeze second)
@@ -47,7 +50,7 @@ if __name__ == '__main__':
         if not (WORK / 'stickers' / f'ff_{idx}.png').exists():
             subprocess.run([sys.executable, __file__, 'one', str(idx), str(t)], check=True)
     cell = 420
-    font = ImageFont.truetype('C:/Windows/Fonts/malgunbd.ttf', 26)
+    font = ImageFont.truetype(str(font_path('malgunbd.ttf', 'malgun.ttf')), 26)
     sheet = Image.new('RGB', (cell * len(CUTS), cell * 2), (255, 216, 77))
     d = ImageDraw.Draw(sheet)
     for k, (idx, _) in enumerate(CUTS):

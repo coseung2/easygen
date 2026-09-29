@@ -92,7 +92,8 @@ def build_reference_video(prompt, reference_video, input_filename="", seconds=4,
 '''
 source = source.replace('\ndef _post_prompt', '\n' + helper + 'def _post_prompt')
 (DEST / 'worker.py').write_text(source, encoding='utf-8')
-workflow = json.loads(Path('F:/modal-gui/lab/2026-09-28-iron-ball-test/h3-r2v-current.json').read_text(encoding='utf-8'))
+from lab_paths import lab_path
+workflow = json.loads(lab_path('2026-09-28-iron-ball-test', 'h3-r2v-current.json').read_text(encoding='utf-8'))
 for node in workflow['nodes']:
     for field in ('widgets_values', 'widgets_values_named'):
         if isinstance(node.get(field), dict):

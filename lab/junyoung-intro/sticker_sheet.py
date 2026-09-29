@@ -2,10 +2,15 @@
 import sys
 from PIL import Image, ImageDraw, ImageFont
 
-ST = 'F:/modal-gui/lab/2026-09-28-junyoung-intro/stickers'
+from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'tools'))
+from lab_paths import font_path, lab_path
+
+ST = str(lab_path('2026-09-28-junyoung-intro', 'stickers'))
 ids = sys.argv[2:]
 cell = 420
-font = ImageFont.truetype('C:/Windows/Fonts/malgunbd.ttf', 28)
+font = ImageFont.truetype(str(font_path('malgunbd.ttf', 'malgun.ttf')), 28)
 sheet = Image.new('RGB', (cell * len(ids), cell + 40), (255, 216, 77))
 d = ImageDraw.Draw(sheet)
 for k, i in enumerate(ids):

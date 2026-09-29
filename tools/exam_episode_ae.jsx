@@ -1,5 +1,5 @@
 (function(){
-var root="F:/modal-gui/series/04-joseon-exam",project=root+"/ae/04-joseon-exam-master.aep",output=root+"/ae/04-joseon-exam-master.avi",log=root+"/ae/04-joseon-exam-master.log";
+var dataRoot=$.getenv("MODAL_GUI_DATA_ROOT")||new File($.fileName).parent.parent.fsName+"/data",root=dataRoot+"/series/04-joseon-exam",project=root+"/ae/04-joseon-exam-master.aep",output=root+"/ae/04-joseon-exam-master.avi",log=root+"/ae/04-joseon-exam-master.log";
 var W=1920,H=1080,FPS=24,SHOT=5,ivory=[0.96,0.91,0.78],gold=[0.9,0.68,0.28],ink=[0.07,0.07,0.09];
 var captions=[["조선에도","수험생이 있었어요"],["붓과 종이로","공부했어요"],["시험장에 모여","실력을 겨뤘어요"],["답안과 이름은","엄격하게 관리했어요"],["공부는 관직으로","가는 길이었어요"],["그들의 시험은","조선의 지식이 되었어요"]];
 var clips=[root+"/clips/c1.mp4",root+"/clips/c2.mp4",root+"/clips/c3.mp4",root+"/clips/c4.mp4",root+"/clips/c5.mp4",root+"/clips/c6.mp4"];

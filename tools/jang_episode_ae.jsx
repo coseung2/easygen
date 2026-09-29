@@ -1,5 +1,6 @@
 (function () {
-  var root="F:/modal-gui/series/01-jang-yeong-sil";
+  var dataRoot=$.getenv("MODAL_GUI_DATA_ROOT")||new File($.fileName).parent.parent.fsName+"/data";
+  var root=dataRoot+"/series/01-jang-yeong-sil";
   var project=root+"/ae/01-jang-yeong-sil-master.aep";
   var output=root+"/ae/01-jang-yeong-sil-master.avi";
   var log=root+"/ae/01-jang-yeong-sil-master.log";

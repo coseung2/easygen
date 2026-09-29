@@ -3,11 +3,15 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'tools'))
+from lab_paths import font_path, lab_path
+
 sys.path.insert(0, str(Path(__file__).parent))
-WORK = Path('F:/modal-gui/lab/2026-09-28-junyoung-intro')
+WORK = lab_path('2026-09-28-junyoung-intro')
 SRC = WORK / 'junyoung-intro-v1.mp4'
 print(subprocess.run(['ffprobe', '-v', 'error', '-show_entries',
                       'format=duration,size:stream=codec_type,width,height,r_frame_rate', '-of', 'compact', str(SRC)],
@@ -20,7 +24,7 @@ subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', str(SRC), '-vf', 'fps=1,sca
 INTRO, CH, PLAY = 1.6, 2.8, 1.1
 snaps = [INTRO + i * CH + PLAY for i in range(6)]
 w, h, per = 135, 240, 8
-font = ImageFont.truetype('C:/Windows/Fonts/consola.ttf', 18)
+font = ImageFont.truetype(str(font_path('consola.ttf', 'CascadiaMono.ttf')), 18)
 sheet = Image.new('RGB', (per * w + 90, len(snaps) * h), (20, 20, 20))
 d = ImageDraw.Draw(sheet)
 for row, s in enumerate(snaps):

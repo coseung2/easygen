@@ -17,7 +17,10 @@ from PIL import Image, ImageDraw, ImageFilter
 from PIL import ImageFont
 from scipy import ndimage
 
-WORK = Path('F:/modal-gui/lab/2026-09-28-junyoung-intro')
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'tools'))
+from lab_paths import font_path, lab_path
+
+WORK = lab_path('2026-09-28-junyoung-intro')
 ST = WORK / 'stickers'
 FR = WORK / 'frames'
 W, H, FPS = 1080, 1920, 30
@@ -33,11 +36,10 @@ INK = (14, 14, 16)
 PAPER = (250, 250, 246)
 YELLOW = (255, 222, 60)
 
-FONTS = Path('C:/Users/coseung2/AppData/Local/Microsoft/Windows/Fonts')
-HEAD = 'C:/Users/coseung2/Desktop/Projects/modal-gui/output/promo/fonts/BlackHanSans-Regular.ttf'
-GM = str(FONTS / 'GmarketSansTTFBold.ttf')
-PB = str(FONTS / 'Pretendard-Black.ttf')
-PSB = str(FONTS / 'Pretendard-SemiBold.ttf')
+HEAD = str(font_path('BlackHanSans-Regular.ttf'))
+GM = str(font_path('GmarketSansTTFBold.ttf'))
+PB = str(font_path('Pretendard-Black.ttf'))
+PSB = str(font_path('Pretendard-SemiBold.ttf'))
 _fc = {}
 
 

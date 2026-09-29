@@ -1,7 +1,7 @@
 """Download source originals for the selected moments from B2 (read-only GETs).
 
 Credentials are read from env injected by `infisical run`; nothing is printed or stored.
-Files land in F:/modal-gui/lab/2026-09-28-junyoung-intro/sources/<moment>_<pos>.<ext>.
+Files land in the configured Lab data root under sources/<moment>_<pos>.<ext>.
 """
 import json
 import os
@@ -12,7 +12,10 @@ from pathlib import Path
 import boto3
 from botocore.config import Config
 
-WORK = Path('F:/modal-gui/lab/2026-09-28-junyoung-intro')
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'tools'))
+from lab_paths import lab_path
+
+WORK = lab_path('2026-09-28-junyoung-intro')
 OUT = WORK / 'sources'
 OUT.mkdir(parents=True, exist_ok=True)
 EXT = {'image/jpeg': 'jpg', 'image/png': 'png', 'image/heic': 'heic', 'image/webp': 'webp',

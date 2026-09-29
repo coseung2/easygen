@@ -9,10 +9,13 @@ import shutil
 import sys
 from pathlib import Path
 
-sys.path.insert(0, 'C:/Users/coseung2/Desktop/Projects/modal-gui/pipelines/_shared')
+REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / 'pipelines' / '_shared'))
+sys.path.insert(0, str(REPO / 'tools'))
+from lab_paths import lab_path
 import cutout  # noqa: E402
 
-LAB = Path('F:/modal-gui/lab/2026-09-28-junyoung-intro')
+LAB = lab_path('2026-09-28-junyoung-intro')
 cache = Path(sys.argv[1])
 which = sys.argv[2] if len(sys.argv) > 2 else 'launch'
 cache.mkdir(parents=True, exist_ok=True)

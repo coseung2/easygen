@@ -1,5 +1,5 @@
 (function(){
-  var root="F:/modal-gui/series/02-turtle-ship", project=root+"/ae/02-turtle-ship-master.aep", output=root+"/ae/02-turtle-ship-master.avi", log=root+"/ae/02-turtle-ship-master.log";
+var dataRoot=$.getenv("MODAL_GUI_DATA_ROOT")||new File($.fileName).parent.parent.fsName+"/data",root=dataRoot+"/series/02-turtle-ship", project=root+"/ae/02-turtle-ship-master.aep", output=root+"/ae/02-turtle-ship-master.avi", log=root+"/ae/02-turtle-ship-master.log";
   var W=1920,H=1080,FPS=24,SHOT=5,ivory=[0.96,0.91,0.78],gold=[0.90,0.68,0.28],ink=[0.07,0.07,0.09];
   var captions=[["거북선은","이순신보다 먼저 있었을까?"],["나무와 철로 만든","조선의 전투선"],["등판을 덮은 구조가","적의 공격을 막았어요"],["바다에서 움직이는","과학기술"],["배와 항해술이","함께 발전했어요"],["거북선의 시작은","오래된 기술에서 왔어요"]];
   var clips=[root+"/clips/c1.mp4",root+"/clips/c2.mp4",root+"/clips/c3.mp4",root+"/clips/c4.mp4",root+"/clips/c5.mp4",root+"/clips/c6.mp4"];

@@ -1,9 +1,13 @@
 """Loudness per half-second and a waveform + spectrogram image, to verify groove, drop-out and ta-da."""
 import sys
 import wave
+from pathlib import Path
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'tools'))
+from lab_paths import font_path
 
 path, out = sys.argv[1], sys.argv[2]
 with wave.open(path) as w:
@@ -19,7 +23,7 @@ print('peak', round(float(np.abs(x).max()), 3), 'len', round(len(x) / sr, 2))
 Wd, Hd = 1800, 520
 img = Image.new('RGB', (Wd, Hd), (18, 18, 20))
 d = ImageDraw.Draw(img)
-font = ImageFont.truetype('C:/Windows/Fonts/consola.ttf', 16)
+font = ImageFont.truetype(str(font_path('consola.ttf', 'CascadiaMono.ttf')), 16)
 cols = np.array_split(x, Wd)
 for i, c in enumerate(cols):
     a = float(np.abs(c).max()) if len(c) else 0

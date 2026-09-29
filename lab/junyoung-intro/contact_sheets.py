@@ -11,11 +11,14 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 sys.stdout.reconfigure(encoding='utf-8')
-WORK = Path('F:/modal-gui/lab/2026-09-28-junyoung-intro')
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'tools'))
+from lab_paths import font_path, lab_path
+
+WORK = lab_path('2026-09-28-junyoung-intro')
 SRC = WORK / 'sources'
 THUMB = WORK / 'thumbs'
 THUMB.mkdir(exist_ok=True)
-font = ImageFont.truetype('C:/Windows/Fonts/malgun.ttf', 15)
+font = ImageFont.truetype(str(font_path('malgun.ttf', 'Malgun.ttf')), 15)
 
 rows = json.load(open(WORK / 'data' / 'moments.json', encoding='utf-8'))
 index = []

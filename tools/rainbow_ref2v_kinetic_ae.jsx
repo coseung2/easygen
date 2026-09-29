@@ -1,5 +1,6 @@
 (function () {
-  var root="F:/modal-gui/series/08-rainbow";
+var dataRoot=$.getenv("MODAL_GUI_DATA_ROOT")||new File($.fileName).parent.parent.fsName+"/data";
+var root=dataRoot+"/series/08-rainbow";
   var project=root+"/out/rainbow-ref2v-kinetic-v2.aep";
   var output=root+"/out/rainbow-ref2v-kinetic-v2.avi";
   var log=root+"/out/rainbow-ref2v-kinetic-v2.log";

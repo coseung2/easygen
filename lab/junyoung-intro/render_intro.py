@@ -18,10 +18,12 @@ from rembg import new_session, remove
 
 sys.path.insert(0, str(Path(__file__).parent))
 from sticker import clean_alpha, make_sticker  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'tools'))
+from lab_paths import font_path, lab_path, series_path
 
-WORK = Path('F:/modal-gui/lab/2026-09-28-junyoung-intro')
+WORK = lab_path('2026-09-28-junyoung-intro')
 W, H, FPS = 1080, 1920, 30
-MUSIC = Path('F:/modal-gui/series/music-beds/es-bed-02.flac')
+MUSIC = series_path('music-beds', 'es-bed-02.flac')
 OUT = WORK / 'junyoung-intro-v1.mp4'
 
 # 어서와 design tokens
@@ -31,11 +33,10 @@ COCOA = (46, 36, 32)
 CREAM = (255, 248, 242)
 WHITE = (255, 255, 255)
 
-FONTS = Path('C:/Users/coseung2/AppData/Local/Microsoft/Windows/Fonts')
-HEAD = 'C:/Users/coseung2/Desktop/Projects/modal-gui/output/promo/fonts/BlackHanSans-Regular.ttf'
-GM = str(FONTS / 'GmarketSansTTFBold.ttf')
-PB = str(FONTS / 'Pretendard-Black.ttf')
-PSB = str(FONTS / 'Pretendard-SemiBold.ttf')
+HEAD = str(font_path('BlackHanSans-Regular.ttf'))
+GM = str(font_path('GmarketSansTTFBold.ttf'))
+PB = str(font_path('Pretendard-Black.ttf'))
+PSB = str(font_path('Pretendard-SemiBold.ttf'))
 _fc = {}
 
 

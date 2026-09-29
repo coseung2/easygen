@@ -1,9 +1,14 @@
 import json
 import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'tools'))
+from lab_paths import lab_path
+import sys
 from collections import Counter
 
 sys.stdout.reconfigure(encoding='utf-8')
-rows = json.load(open('F:/modal-gui/lab/2026-09-28-junyoung-intro/data/moments.json', encoding='utf-8'))
+rows = json.load(open(lab_path('2026-09-28-junyoung-intro', 'data', 'moments.json'), encoding='utf-8'))
 kinds = Counter()
 for r in rows:
     assets = r['assets'] or []

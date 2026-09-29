@@ -15,13 +15,16 @@ from rembg import new_session, remove
 sys.path.insert(0, str(Path(__file__).parent))
 from sticker import clean_alpha, make_sticker  # noqa: E402
 
-WORK = Path('F:/modal-gui/lab/2026-09-28-junyoung-intro')
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'tools'))
+from lab_paths import font_path, lab_path
+
+WORK = lab_path('2026-09-28-junyoung-intro')
 ST = WORK / 'stickers'
 FR = WORK / 'frames'
 ST.mkdir(exist_ok=True)
 FR.mkdir(exist_ok=True)
 ix = json.load(open(WORK / 'data' / 'media_index.json', encoding='utf-8'))
-font = ImageFont.truetype('C:/Windows/Fonts/malgunbd.ttf', 26)
+font = ImageFont.truetype(str(font_path('malgunbd.ttf', 'malgun.ttf')), 26)
 
 PHOTOS = [int(a) for a in sys.argv[1:]] or [165, 175, 183, 144, 159, 118, 102, 1, 99, 147, 158, 184]
 # (name, media index, second): full frames used as plates

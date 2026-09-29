@@ -1,5 +1,5 @@
 (function(){
-  var root="F:/modal-gui/series/03-kim-jeong-ho", project=root+"/ae/03-kim-jeong-ho-master.aep", output=root+"/ae/03-kim-jeong-ho-master.avi", log=root+"/ae/03-kim-jeong-ho-master.log";
+var dataRoot=$.getenv("MODAL_GUI_DATA_ROOT")||new File($.fileName).parent.parent.fsName+"/data",root=dataRoot+"/series/03-kim-jeong-ho", project=root+"/ae/03-kim-jeong-ho-master.aep", output=root+"/ae/03-kim-jeong-ho-master.avi", log=root+"/ae/03-kim-jeong-ho-master.log";
   var W=1920,H=1080,FPS=24,SHOT=5,ivory=[0.96,0.91,0.78],gold=[0.90,0.68,0.28],ink=[0.07,0.07,0.09];
   var captions=[["김정호는","지도를 만들었어요"],["목판에 새겨","널리 보급했어요"],["산과 물길을","한눈에 담고"],["전국의 길과 고을을","정리했어요"],["지도는 지식이 되어","사람들에게 갔어요"],["대동여지도","길을 기록한 기술"]];
   var clips=[root+"/clips/c1.mp4",root+"/clips/c2.mp4",root+"/clips/c3.mp4",root+"/clips/c4.mp4",root+"/clips/c5.mp4",root+"/clips/c6.mp4"];

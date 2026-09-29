@@ -1,7 +1,8 @@
 from pathlib import Path
 from PIL import Image, ImageDraw
 
-OUT=Path(r"F:/modal-gui/series/05-secret-inspector/plates");W,H=1344,768
+from lab_paths import series_path
+OUT=series_path("05-secret-inspector", "plates");W,H=1344,768
 PAPER=(239,231,210);INK=(25,24,30);GOLD=(179,133,55);RED=(158,62,49);BLUE=(46,72,96)
 def common(d): d.line((60,88,1284,88),fill=GOLD,width=2);d.line((60,680,1284,680),fill=GOLD,width=2)
 def main():

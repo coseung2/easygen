@@ -1,7 +1,8 @@
 """Create deterministic text-free historical infographic plates for episode 02."""
 from pathlib import Path
 
-OUT = Path(r"F:/modal-gui/series/02-turtle-ship/plates")
+from lab_paths import series_path
+OUT = series_path("02-turtle-ship", "plates")
 W, H = 1344, 768
 P = {"paper": "#eee6d2", "ink": "#17191f", "gold": "#b48a42", "red": "#a94435", "blue": "#264d72"}
 

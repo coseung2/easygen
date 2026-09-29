@@ -1,5 +1,6 @@
 (function () {
-  var root = "F:/modal-gui/series/09-violet-sky";
+var dataRoot = $.getenv("MODAL_GUI_DATA_ROOT") || new File($.fileName).parent.parent.fsName + "/data";
+var root = dataRoot + "/series/09-violet-sky";
   var projectPath = root + "/ae/09-violet-sky-kinetic-master.aep";
   var renderPath = root + "/ae/09-violet-sky-kinetic-master.avi";
   var logPath = root + "/ae/09-violet-sky-kinetic-master.log";

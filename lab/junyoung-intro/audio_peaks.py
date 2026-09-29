@@ -6,7 +6,10 @@ from pathlib import Path
 
 import numpy as np
 
-WORK = Path('F:/modal-gui/lab/2026-09-28-junyoung-intro')
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'tools'))
+from lab_paths import lab_path
+
+WORK = lab_path('2026-09-28-junyoung-intro')
 ix = json.load(open(WORK / 'data' / 'media_index.json', encoding='utf-8'))
 sr = 16000
 for i in [int(a) for a in sys.argv[1:]]:

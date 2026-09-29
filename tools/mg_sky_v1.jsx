@@ -1,6 +1,7 @@
 // 09 "하늘은 왜 보라색이 아닐까?" — native After Effects motion graphics, 120 BPM grid.
 (function () {
-  var OUT = "F:/modal-gui/series/09-violet-sky/mg";
+  var DATA_ROOT = $.getenv("MODAL_GUI_DATA_ROOT") || new File($.fileName).parent.parent.fsName + "/data";
+  var OUT = DATA_ROOT + "/series/09-violet-sky/mg";
   var projectPath = OUT + "/09-sky-mg-v1.aep";
   var renderPath = OUT + "/09-sky-mg-v1.avi";
   var logPath = OUT + "/09-sky-mg-v1.log";

@@ -7,12 +7,15 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 from rembg import new_session, remove
 
 sys.stdout.reconfigure(encoding='utf-8')
-WORK = Path('F:/modal-gui/lab/2026-09-28-junyoung-intro')
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'tools'))
+from lab_paths import font_path, lab_path
+
+WORK = lab_path('2026-09-28-junyoung-intro')
 index = json.load(open(WORK / 'data' / 'media_index.json', encoding='utf-8'))
 picks = [int(a) for a in sys.argv[1:]]
 models = ['isnet-general-use', 'u2net_human_seg']
 sessions = {m: new_session(m) for m in models}
-font = ImageFont.truetype('C:/Windows/Fonts/malgun.ttf', 18)
+font = ImageFont.truetype(str(font_path('malgun.ttf', 'Malgun.ttf')), 18)
 cell = 300
 sheet = Image.new('RGB', ((len(models) + 1) * cell, len(picks) * cell), (60, 60, 60))
 for row, i in enumerate(picks):

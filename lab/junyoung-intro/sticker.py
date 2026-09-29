@@ -11,7 +11,10 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageOps
 from rembg import new_session, remove
 from scipy import ndimage
 
-WORK = Path('F:/modal-gui/lab/2026-09-28-junyoung-intro')
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'tools'))
+from lab_paths import font_path, lab_path
+
+WORK = lab_path('2026-09-28-junyoung-intro')
 
 
 def clean_alpha(alpha, thresh=0.5):
@@ -66,7 +69,7 @@ if __name__ == '__main__':
     model, out_path, picks = sys.argv[1], sys.argv[2], [int(x) for x in sys.argv[3:]]
     session = new_session(model)
     cell = 360
-    font = ImageFont.truetype('C:/Windows/Fonts/malgun.ttf', 20)
+    font = ImageFont.truetype(str(font_path('malgun.ttf', 'Malgun.ttf')), 20)
     sheet = Image.new('RGB', (cell * len(picks), cell), (150, 104, 255))
     for k, i in enumerate(picks):
         im = load(i)

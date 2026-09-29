@@ -4,14 +4,15 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
+from lab_paths import font_path, series_path
 
 
-ROOT = Path(r"F:/modal-gui/series/08-rainbow")
+ROOT = series_path("08-rainbow")
 CLIPS = [ROOT / "clips-ref2v" / f"c{i}-ref2v.mp4" for i in range(1, 7)]
-MUSIC = Path(r"F:/modal-gui/series/music-beds/es-bed-02.flac")
+MUSIC = series_path("music-beds", "es-bed-02.flac")
 OUT = ROOT / "final" / "08_rainbow_ref2v.mp4"
 WORK = ROOT / "final" / "work"
-FONT = Path(r"C:/Users/coseung2/AppData/Local/Microsoft/Windows/Fonts/BMJUA_ttf.ttf")
+FONT = font_path("BMJUA_ttf.ttf")
 
 CAPTIONS = [
     "무지개는 반원일까?",

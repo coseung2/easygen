@@ -1,7 +1,8 @@
 from pathlib import Path
 from PIL import Image, ImageDraw
 
-OUT = Path(r"F:/modal-gui/series/02-turtle-ship/plates")
+from lab_paths import series_path
+OUT = series_path("02-turtle-ship", "plates")
 W, H = 1344, 768
 PAPER=(238,230,210); INK=(23,25,31); GOLD=(180,138,66); RED=(169,68,53); BLUE=(38,77,114)
 

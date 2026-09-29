@@ -1,6 +1,7 @@
 (function () {
   var slug="11-tardigrade", number="11", titleText="물곰은 우주에서도 산다";
-  var root="F:/modal-gui/series/"+slug, outRoot=root+"/ae";
+var dataRoot=$.getenv("MODAL_GUI_DATA_ROOT")||new File($.fileName).parent.parent.fsName+"/data";
+var root=dataRoot+"/series/"+slug, outRoot=root+"/ae";
   var projectPath=outRoot+"/"+number+"-kinetic-master.aep", renderPath=outRoot+"/"+number+"-kinetic-master.avi", logPath=outRoot+"/"+number+"-kinetic-master.log";
   var clips=[root+"/clips/c1.mp4",root+"/clips/c2.mp4",root+"/clips/c3.mp4",root+"/clips/c4.mp4",root+"/clips/c5.mp4"];
   var titlePath=root+"/title/title.mp4", endPath=root+"/title/title.mp4", musicPath=outRoot+"/music-31s.wav";

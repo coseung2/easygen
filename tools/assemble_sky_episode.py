@@ -2,13 +2,14 @@
 from __future__ import annotations
 import subprocess
 from pathlib import Path
+from lab_paths import font_path, series_path
 
-ROOT = Path(r"F:/modal-gui/series/09-violet-sky")
+ROOT = series_path("09-violet-sky")
 CLIPS = [ROOT / "clips" / f"c{i}.mp4" for i in range(1, 7)]
-MUSIC = Path(r"F:/modal-gui/series/music-beds/es-bed-04.flac")
+MUSIC = series_path("music-beds", "es-bed-04.flac")
 OUT = ROOT / "final" / "09_violet_sky_ref2v.mp4"
 WORK = ROOT / "final" / "work"
-FONT = Path(r"C:/Users/coseung2/AppData/Local/Microsoft/Windows/Fonts/BMJUA_ttf.ttf")
+FONT = font_path("BMJUA_ttf.ttf")
 CAPTIONS = [
     "하늘은 사실 보라색이어야 해요",
     "햇빛은 여러 색으로 이루어져요",
