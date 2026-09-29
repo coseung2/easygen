@@ -225,7 +225,7 @@ export function ChatPanel({ onNotice }: { onNotice: (message: string) => void })
 
       <div className="chat-log">
         {messages.length === 0 && !chatStream.text && (
-          <p className="dim">아직 대화가 없습니다. 샷 구성, 프롬프트 다듬기, 후보 평가를 이 대화에서 요청하세요.</p>
+          <p className="dim">대화 없음</p>
         )}
         {messages.map((message) => (
           <div className={`chat-bubble ${message.role}`} key={message.id}>
@@ -324,7 +324,7 @@ export function ChatPanel({ onNotice }: { onNotice: (message: string) => void })
           }}
         />
         <div className="chat-actions">
-          <span className="dim">{isTauri ? 'Enter 전송 · Shift+Enter 줄바꿈' : '대화는 Tauri 앱에서 동작합니다.'}</span>
+          {!isTauri && <span className="inline-warn">Tauri 앱 필요</span>}
           {chatStream.status === 'streaming' ? (
             <button className="secondary-action small" onClick={() => void stop()}>
               <Square size={12} />

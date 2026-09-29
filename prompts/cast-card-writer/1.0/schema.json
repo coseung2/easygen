@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cast-card-writer@1.0/output",
+  "type": "object",
+  "required": ["traits", "meter", "excluded"],
+  "properties": {
+    "traits": {
+      "type": "array", "maxItems": 12,
+      "items": {
+        "type": "object", "required": ["role", "gag", "evidence"],
+        "properties": {
+          "role": { "type": "string", "maxLength": 12 },
+          "gag": { "type": "string", "maxLength": 16 },
+          "evidence": { "type": "object", "required": ["quote"], "properties": {
+            "quote": { "type": "string" }, "date": { "type": "string" }, "source": { "enum": ["caption", "record", "user"] } } },
+          "media_hint": { "type": "string" }
+        }
+      }
+    },
+    "meter": {
+      "type": ["object", "null"],
+      "properties": { "from": { "type": "number" }, "to": { "type": "number" }, "unit": { "type": "string" },
+                      "from_label": { "type": "string" }, "to_label": { "type": "string" } }
+    },
+    "excluded": { "type": "array", "items": { "type": "object", "properties": {
+      "item": { "type": "string" }, "reason": { "type": "string" } } } }
+  }
+}

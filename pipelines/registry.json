@@ -1,0 +1,57 @@
+{
+  "pipelines": {
+    "h3-refvideo": {
+      "1.0": {
+        "status": "candidate",
+        "label": null,
+        "engine": "modal-comfyui",
+        "kind": "video",
+        "summary": "Blender motion reference video and optional appearance image to H3 video",
+        "tone": null,
+        "path": "h3-refvideo/1.0"
+      }
+    },
+    "local-freeze-cast": {
+      "1.0": {
+        "status": "candidate",
+        "label": "프리즈 프레임 캐릭터 인트로",
+        "engine": "local-python",
+        "kind": "video",
+        "summary": "영상이 찰칵 멈추며 인물을 스티커로 따내고 예능 등장인물처럼 소개하는 9:16 영상 (1.6 + 3.2×인원 + 3.2초)",
+        "tone": "playful",
+        "path": "local-freeze-cast/1.0"
+      }
+    },
+    "local-launch-spoof": {
+      "1.0": {
+        "status": "candidate",
+        "label": "제품 런칭 패러디",
+        "engine": "local-python",
+        "kind": "video",
+        "summary": "사진·영상 몇 장으로 신제품 출시 광고처럼 발랄하게 소개하는 9:16 · 22초 영상",
+        "tone": "playful",
+        "path": "local-launch-spoof/1.0"
+      }
+    }
+  },
+  "prompts": {
+    "cast-card-writer": {
+      "1.0": {
+        "status": "candidate",
+        "path": "cast-card-writer/1.0"
+      }
+    },
+    "moodboard": {
+      "1.0": {
+        "status": "candidate",
+        "path": "moodboard/1.0"
+      }
+    },
+    "storyboard": {
+      "1.0": {
+        "status": "candidate",
+        "path": "storyboard/1.0"
+      }
+    }
+  }
+}

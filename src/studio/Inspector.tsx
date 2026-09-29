@@ -20,7 +20,9 @@ import { activeRunFor, cancelStudioRun, retryStudioDownload, startStudioRun } fr
 import { generatedAssetFor } from './runController'
 import { ChatPanel } from './ChatPanel'
 import { useStudioStore } from './store'
+import { browserCapability, confirmProtectedAction } from '../ux/stageOne'
 import { WORKFLOW_STATUS_LABELS, listWorkflows, type WorkflowRow } from '../lib/workflows'
+import { TEMPLATE_STARTERS, listTemplates as listVideoTemplates, templateRef, type TemplateInfo } from '../lib/templates'
 import { listModalProfiles, type ModalProfile } from '../lib/usage'
 import { checkToolCall } from './toolInput'
 import {
@@ -165,8 +167,43 @@ function ProfileSelect({ field, value, onChange }: { field: FieldSpec; value: Co
       )}
       {archived && <small className="bad">선택한 계정을 찾을 수 없습니다. 다른 계정을 고르세요.</small>}
       {rows.length === 0 && !error && (
-        <small className="dim">등록된 Modal 계정이 없습니다. 사용량 화면에서 계정을 등록하세요.</small>
+        <small className="dim">계정 없음</small>
       )}
+      {error && <small className="bad">{error}</small>}
+    </label>
+  )
+}
+
+/** 로컬 영상 템플릿 선택. candidate는 '시험'으로 표시하고, 실행할 수 없는 템플릿은 이유를 보여준다. */
+function TemplateSelect({ field, value, onChange }: { field: FieldSpec; value: ConfigValue; onChange: (value: ConfigValue) => void }) {
+  const [rows, setRows] = React.useState<TemplateInfo[]>([])
+  const [error, setError] = React.useState('')
+
+  React.useEffect(() => {
+    let cancelled = false
+    void listVideoTemplates()
+      .then((list) => { if (!cancelled) setRows(list) })
+      .catch((loadError) => { if (!cancelled) setError(String(loadError)) })
+    return () => { cancelled = true }
+  }, [])
+
+  const current = typeof value === 'string' ? value : ''
+  const selected = rows.find((row) => templateRef(row) === current)
+  return (
+    <label className="field-label">
+      {field.label}
+      <select value={current} onChange={(event) => onChange(event.target.value)}>
+        <option value="">템플릿 선택</option>
+        {rows.map((row) => (
+          <option key={templateRef(row)} value={templateRef(row)} disabled={!row.runnable}>
+            {row.label}{row.status === 'candidate' ? ' (시험)' : ''}
+          </option>
+        ))}
+      </select>
+      {selected && <small className="dim">{selected.summary}</small>}
+      {selected && !selected.runnable && <small className="bad">{selected.unavailableReason}</small>}
+      {current && !selected && rows.length > 0 && <small className="bad">선택한 템플릿을 찾을 수 없습니다.</small>}
+      {!isTauri && <small className="dim">템플릿 목록은 Tauri 앱에서 불러옵니다.</small>}
       {error && <small className="bad">{error}</small>}
     </label>
   )
@@ -202,7 +239,7 @@ function WorkflowSelect({ field, value, onChange }: { field: FieldSpec; value: C
         ))}
       </select>
       {rows.length === 0 && !error && (
-        <small className="dim">등록된 워크플로가 없습니다. 연결 관리 화면의 워크플로에서 등록하세요.</small>
+        <small className="dim">워크플로 없음</small>
       )}
       {selected && (
         <small className="dim">
@@ -223,6 +260,8 @@ function NodeInspector({ id, onReveal, onNotice }: { id: string; onReveal: (path
   const runs = useStudioStore((state) => state.runs)
   const updateNode = useStudioStore((state) => state.updateNode)
   const setNodeConfig = useStudioStore((state) => state.setNodeConfig)
+  const updateShot = useStudioStore((state) => state.updateShot)
+  const shots = useStudioStore((state) => state.doc.shots)
   const removeNodes = useStudioStore((state) => state.removeNodes)
   const duplicateNode = useStudioStore((state) => state.duplicateNode)
   const removeEdge = useStudioStore((state) => state.removeEdge)
@@ -278,7 +317,7 @@ function NodeInspector({ id, onReveal, onNotice }: { id: string; onReveal: (path
           <button className="icon-button" title="노드 복제" onClick={() => duplicateNode(node.id)}>
             <Copy size={14} />
           </button>
-          <button className="icon-button danger" title="노드 삭제" onClick={() => removeNodes([node.id])}>
+          <button className="icon-button danger" title="노드 삭제" onClick={() => confirmProtectedAction(`“${node.title}” 노드와 연결된 입력을 삭제합니다. 실행 기록은 남습니다.`) && removeNodes([node.id])}>
             <Trash2 size={14} />
           </button>
         </div>
@@ -313,12 +352,29 @@ function NodeInspector({ id, onReveal, onNotice }: { id: string; onReveal: (path
       )}
 
       {spec.fields.map((field) => (
-        <FieldControl
-          key={field.key}
-          field={field}
-          value={node.config[field.key] ?? null}
-          onChange={(value) => setNodeConfig(node.id, field.key, value)}
-        />
+        field.dynamic === 'templates' ? (
+          <TemplateSelect
+            key={field.key}
+            field={field}
+            value={node.config[field.key] ?? null}
+            onChange={(value) => {
+              setNodeConfig(node.id, field.key, value)
+              // 템플릿을 처음 고를 때만 입력 예시를 채운다. 이미 쓴 입력은 덮지 않는다.
+              const current = node.config.job
+              const starter = typeof value === 'string' ? TEMPLATE_STARTERS[value] : undefined
+              if (starter && (typeof current !== 'string' || current.trim() === '')) {
+                setNodeConfig(node.id, 'job', JSON.stringify(starter, null, 2))
+              }
+            }}
+          />
+        ) : (
+          <FieldControl
+            key={field.key}
+            field={field}
+            value={node.config[field.key] ?? null}
+            onChange={(value) => setNodeConfig(node.id, field.key, value)}
+          />
+        )
       ))}
 
       {node.kind === 'tool' && <ToolNodeSection node={node} onNotice={onNotice} />}
@@ -326,13 +382,16 @@ function NodeInspector({ id, onReveal, onNotice }: { id: string; onReveal: (path
       {node.kind === 'select' && (
         <section className="inspector-section">
           <h3 className="inspector-title">후보 {candidates.length}</h3>
-          {candidates.length === 0 && <p className="dim">상위 노드의 결과 소재가 아직 없습니다. 생성 노드를 연결하고 실행하면 후보가 쌓입니다.</p>}
+          {candidates.length === 0 && <p className="dim">후보 없음</p>}
           <div className="candidate-list">
             {candidates.map((candidate) => (
               <button
                 key={candidate.id}
                 className={selectedAsset?.id === candidate.id ? 'candidate-card active' : 'candidate-card'}
-                onClick={() => setNodeConfig(node.id, 'selectedAssetId', candidate.id)}
+                onClick={() => {
+                  setNodeConfig(node.id, 'selectedAssetId', candidate.id)
+                  for (const shot of shots.filter((item) => item.nodeIds.includes(node.id))) updateShot(shot.id, { selectedAssetId: candidate.id })
+                }}
                 title={candidate.name}
               >
                 <span className="candidate-thumb">
@@ -344,7 +403,7 @@ function NodeInspector({ id, onReveal, onNotice }: { id: string; onReveal: (path
               </button>
             ))}
           </div>
-          {selectedAsset && <p className="dim">선택 고정: {selectedAsset.name}</p>}
+          {selectedAsset && <p className="dim">{selectedAsset.name}</p>}
         </section>
       )}
 
@@ -352,7 +411,7 @@ function NodeInspector({ id, onReveal, onNotice }: { id: string; onReveal: (path
         <h3 className="inspector-title">
           <Link2 size={13} /> 참조 입력 {incoming.length > 0 ? `(${incoming.length})` : ''}
         </h3>
-        {incoming.length === 0 && <p className="dim">연결된 입력이 없습니다. 캔버스에서 포트를 끌어 연결하세요.</p>}
+        {incoming.length === 0 && <p className="dim">입력 없음</p>}
         <div className="ref-list">
           {[...assetRefs, ...otherRefs].map((edge) => {
             const sourceNode = nodeById.get(edge.source)
@@ -411,11 +470,7 @@ function NodeInspector({ id, onReveal, onNotice }: { id: string; onReveal: (path
       <section className="inspector-section">
         <h3 className="inspector-title">결과 후보 {node.results.length > 0 ? `(${node.results.length})` : ''}</h3>
         {node.results.length === 0 && (
-          <p className="dim">
-            {spec.executionStage === null
-              ? '기획·구성 노드는 실행 대신 다른 노드의 입력으로 쓰입니다.'
-              : `아직 결과가 없습니다. 실행하면 결과가 이 노드의 후보로 등록됩니다.`}
-          </p>
+          <p className="dim">결과 없음</p>
         )}
         <div className="result-strip">
           {node.results.map((assetId) => {
@@ -439,13 +494,7 @@ function NodeInspector({ id, onReveal, onNotice }: { id: string; onReveal: (path
       <section className="inspector-section">
         <h3 className="inspector-title">실행 기록 {runs.filter((run) => run.nodeId === node.id).length > 0 ? `(${runs.filter((run) => run.nodeId === node.id).length})` : ''}</h3>
         {runs.filter((run) => run.nodeId === node.id).length === 0 && (
-          <p className="dim">
-            {spec.executionStage === null
-              ? '이 노드는 실행되지 않습니다.'
-              : isRunnable(node.kind)
-                ? '아직 실행 기록이 없습니다. 노드 카드나 아래 버튼에서 실행하세요.'
-                : `실행 연결은 ${spec.executionStage}단계에서 추가됩니다.`}
-          </p>
+          <p className="dim">실행 기록 없음</p>
         )}
         <div className="run-list">
           {runs.filter((run) => run.nodeId === node.id).slice(0, 6).map((run) => (
@@ -470,18 +519,6 @@ function NodeInspector({ id, onReveal, onNotice }: { id: string; onReveal: (path
         </div>
         {isRunnable(node.kind) && (
           <div className="run-actions">
-            <button
-              className="secondary-action small"
-              disabled={Boolean(activeRun)}
-              onClick={() => {
-                void startStudioRun(node.id).then((result) => {
-                  if (!result.ok) onNotice(result.reason ?? '실행을 시작하지 못했습니다.')
-                  else if (result.reason) onNotice(result.reason)
-                })
-              }}
-            >
-              실행
-            </button>
             {activeRun && (
               <button
                 className="row-action danger"
@@ -489,9 +526,15 @@ function NodeInspector({ id, onReveal, onNotice }: { id: string; onReveal: (path
                   void cancelStudioRun(activeRun.id).then((result) => onNotice(result.reason ?? '중단 요청을 보냈습니다.'))
                 }}
               >
-                중단 요청
+                중단
               </button>
             )}
+            {!activeRun && <p className="dim">{node.status === 'stale' ? '입력 변경됨' : node.status === 'failed' ? '실패' : ''}</p>}
+            {runs.some((run) => run.nodeId === node.id && run.status === 'prepared' && (run.outputPath || run.remotePath)) && <button className="secondary-action small" onClick={() => {
+              const prepared = runs.find((run) => run.nodeId === node.id && run.status === 'prepared' && (run.outputPath || run.remotePath))
+              if (prepared) onReveal(prepared.outputPath || prepared.remotePath || '')
+            }}>준비한 프로젝트 열기</button>}
+            {activeRun?.status === 'cancel_requested' && <p className="dim">중단 확인 대기</p>}
           </div>
         )}
       </section>
@@ -590,10 +633,10 @@ function ToolNodeSection({ node, onNotice }: { node: StudioNode; onNotice: (mess
         </select>
       </label>
       {connections.length === 0 && (
-        <p className="dim">사이드바의 연결 관리 화면에서 MCP 서버를 등록하고 연결 테스트를 실행하세요.</p>
+        <p className="dim">연결 없음</p>
       )}
       {connectionId && tools.length === 0 && (
-        <p className="dim">이 연결에서 확인된 도구가 없습니다. 연결 관리에서 연결 테스트를 다시 실행하세요.</p>
+        <p className="dim">도구 없음</p>
       )}
       {compatibility && !compatibility.ok && <p className="inline-warn">{compatibility.reason}</p>}
       {detected.length > 0 && (
@@ -659,7 +702,7 @@ function ShotInspector({ id, onExpandShot }: { id: string; onExpandShot: (shotId
       <div className="inspector-head">
         <span className="section-kicker">샷 {shot.order + 1}</span>
         <div className="inspector-actions">
-          <button className="icon-button danger" title="샷 삭제" onClick={() => removeShot(shot.id)}>
+          <button className="icon-button danger" title="샷 삭제" onClick={() => confirmProtectedAction(`“${shot.title}” 샷을 삭제합니다. 연결된 제작 노드는 캔버스에 남습니다.`) && removeShot(shot.id)}>
             <Trash2 size={14} />
           </button>
         </div>
@@ -700,7 +743,11 @@ function ShotInspector({ id, onExpandShot }: { id: string; onExpandShot: (shotId
 
       <section className="inspector-section">
         <h3 className="inspector-title">선택 소재</h3>
-        <select value={shot.selectedAssetId ?? ''} onChange={(event) => updateShot(shot.id, { selectedAssetId: event.target.value || null })}>
+        <select value={shot.selectedAssetId ?? ''} onChange={(event) => {
+          const assetId = event.target.value || null
+          updateShot(shot.id, { selectedAssetId: assetId })
+          for (const linked of shotNodes) if (assetId) useStudioStore.getState().setNodeConfig(linked.id, 'selectedAssetId', assetId)
+        }}>
           <option value="">선택 없음</option>
           {assets.map((asset) => (
             <option key={asset.id} value={asset.id}>{asset.name}</option>
@@ -710,7 +757,7 @@ function ShotInspector({ id, onExpandShot }: { id: string; onExpandShot: (shotId
 
       <section className="inspector-section">
         <h3 className="inspector-title">연결된 제작 노드 ({shotNodes.length})</h3>
-        {shotNodes.length === 0 && <p className="dim">아직 노드가 없습니다. 아래 버튼으로 샷에 필요한 노드를 만드세요.</p>}
+        {shotNodes.length === 0 && <p className="dim">노드 없음</p>}
         <div className="chip-row">
           {shotNodes.map((node) => (
             <button key={node.id} className="chip" onClick={() => setSelection({ type: 'node', id: node.id })}>
@@ -742,7 +789,7 @@ function AssetInspector({ id, onReveal }: { id: string; onReveal: (path: string)
       <div className="inspector-head">
         <span className="section-kicker">소재 · {asset.kind}</span>
         <div className="inspector-actions">
-          <button className="icon-button danger" title="소재 삭제" onClick={() => removeAsset(asset.id)}>
+          <button className="icon-button danger" title="소재 삭제" onClick={() => confirmProtectedAction(`“${asset.name}” 소재와 이를 참조하는 노드 ${referencing.length}개를 삭제합니다.`) && removeAsset(asset.id)}>
             <Trash2 size={14} />
           </button>
         </div>
@@ -824,6 +871,7 @@ function ProjectInspector({ onImportAssets, onNotice }: { onImportAssets: () => 
   }, [refresh])
 
   const saveAsTemplate = async () => {
+    if (!isTauri) return onNotice(browserCapability('persistProject').reason)
     const selection = useStudioStore.getState().selection
     const template = templateFromSelection()
     if (template.nodes.length === 0) {
@@ -870,7 +918,6 @@ function ProjectInspector({ onImportAssets, onNotice }: { onImportAssets: () => 
 
       <section className="inspector-section">
         <h3 className="inspector-title">노드 그룹 템플릿 {templates.length > 0 ? `(${templates.length})` : ''}</h3>
-        <p className="dim">선택한 노드와 하위 노드를 템플릿으로 저장하고 다른 프로젝트에서 다시 놓습니다. 소재 경로는 복사하지 않습니다.</p>
         <div className="template-save">
           <input
             value={templateName}
@@ -907,6 +954,8 @@ function ProjectInspector({ onImportAssets, onNotice }: { onImportAssets: () => 
                 className="icon-button small danger"
                 title="템플릿 삭제"
                 onClick={() => {
+                  if (!isTauri) return onNotice(browserCapability('persistProject').reason)
+                  if (!confirmProtectedAction(`“${template.name}” 템플릿을 삭제합니다. 이미 놓인 노드는 남습니다.`)) return
                   void deleteTemplate(template.id).then(() => refresh()).catch((error) => onNotice(String(error)))
                 }}
               >
@@ -919,7 +968,7 @@ function ProjectInspector({ onImportAssets, onNotice }: { onImportAssets: () => 
 
       <section className="inspector-section">
         <h3 className="inspector-title">비용 귀속</h3>
-        {!usage && <p className="dim">실행별 비용을 읽는 중입니다. 기록이 없으면 0이 아니라 미확인으로 표시됩니다.</p>}
+        {usage?.runs.some((run) => run.amountKind === 'pending') && <button className="secondary-action small" onClick={() => { window.location.hash = 'usage'; onNotice('사용량 화면에서 전체 동기화를 실행해 반영 대기 비용을 확인하세요.') }}>사용량에서 비용 동기화</button>}
         {usage && (
           <>
             <dl className="meta-list">
@@ -945,9 +994,6 @@ function ProjectInspector({ onImportAssets, onNotice }: { onImportAssets: () => 
         )}
       </section>
 
-      <p className="dim">
-        캔버스가 비어 있으면 왼쪽 패널에서 노드를 추가하세요. 소재·대화·실행 기록은 이 프로젝트에 함께 저장됩니다.
-      </p>
     </div>
   )
 }

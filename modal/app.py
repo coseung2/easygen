@@ -83,6 +83,12 @@ def _normalise_input_filename(value: str) -> str:
     return value.replace("\\", "/").removeprefix("input/")
 
 
+def _half_bucket(value: int) -> int:
+    """Half of a requested dimension, aligned to the 32px H3 bucket grid."""
+    half = max(32, value // 2)
+    return half - (half % 32)
+
+
 def _convert(workflow: dict, prompt: str, input_filename: str, output_prefix: str, seconds: float, width: int, height: int, seed: int) -> dict:
     nodes = {str(n["id"]): n for n in workflow.get("nodes", []) if n.get("type") not in SKIP and n.get("mode", 0) != 4}
     links = {str(row[0]): row for row in workflow.get("links", [])}
@@ -137,8 +143,16 @@ def _convert(workflow: dict, prompt: str, input_filename: str, output_prefix: st
         if node["type"] == "DenoMiniMaxH3ReferenceImageLoader":
             api[node_id]["inputs"]["image_paths"] = _normalise_input_filename(input_filename)
         if node["type"] in {"MiniMaxH3ImageToVideo", "DenoMiniMaxH3ReferenceToVideo"}:
-            api[node_id]["inputs"]["width"] = width
-            api[node_id]["inputs"]["height"] = height
+            # Workflows that take the sampler size from a ResolutionSelector link
+            # sample at half resolution and let the latent upscaler restore the
+            # target size. Mirror that chain so the requested output size is
+            # honoured instead of the workflow's fixed 16:9 preset.
+            if isinstance(api[node_id]["inputs"].get("width"), list):
+                api[node_id]["inputs"]["width"] = _half_bucket(width)
+                api[node_id]["inputs"]["height"] = _half_bucket(height)
+            else:
+                api[node_id]["inputs"]["width"] = width
+                api[node_id]["inputs"]["height"] = height
             frames = max(5, round(seconds * 24))
             api[node_id]["inputs"]["length"] = frames + (5 - (frames % 17)) % 17
         if node["type"] == "VHS_VideoCombine":
@@ -147,6 +161,8 @@ def _convert(workflow: dict, prompt: str, input_filename: str, output_prefix: st
             api[node_id]["inputs"]["noise_seed"] = seed
         if node["type"] == "MinimaxH3LatentUpscaler3D":
             api[node_id]["inputs"]["align"] = 1
+            api[node_id]["inputs"]["mode.width"] = width
+            api[node_id]["inputs"]["mode.height"] = height
         if node["type"] == "LoraLoaderModelOnly":
             api[node_id]["inputs"]["lora_name"] = "H3/lightx2v_hybrid-4to8step-full-fusion_Turbo_pruned.safetensors"
     return api
@@ -211,6 +227,9 @@ class LatestH3:
         sys.path.insert(0, "/root/h3_service")
         from h3_service.license_gate import require_attestation
         require_attestation(attestation, purpose="latest H3 generation")
+        # The caller uploads the input image immediately before this call; a
+        # warm container still sees its older volume snapshot otherwise.
+        data.reload()
         workflow_name = {"t2v": "video_minimax_h3_t2v.json", "ref2v": "video_minimax_h3_r2v.json"}.get(kind, "video_minimax_h3_i2v.json")
         workflow = json.loads((ROOT / "user/default/workflows" / workflow_name).read_text(encoding="utf-8"))
         api = _convert(workflow, prompt, input_filename, f"PUBG/{kind}", seconds, width, height, seed)

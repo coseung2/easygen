@@ -60,9 +60,7 @@ export function LeftPanel({ onAddNode, onImportAssets }: { onAddNode: (kind: Nod
             <Upload size={13} />
             소재 가져오기
           </button>
-          {assets.length === 0 && (
-            <p className="dim">이미지·영상·오디오 파일을 가져오면 프로젝트 소재로 등록되고 소재 노드가 만들어집니다.</p>
-          )}
+          {assets.length === 0 && <p className="dim">소재 없음</p>}
           <div className="asset-list">
             {assets.map((asset) => (
               <button key={asset.id} className="asset-item" onClick={() => openAsset(asset.id)} title={asset.storedPath || asset.name}>

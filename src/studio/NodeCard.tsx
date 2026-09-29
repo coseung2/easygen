@@ -141,16 +141,15 @@ export function NodeCard({ data, selected }: NodeProps<StudioFlowNode>) {
 
       <footer className="snode-foot">
         <span className={`snode-status ${node.status}`}>{STATUS_LABELS[node.status]}</span>
-        {activeRun && <span className="snode-run-state">{runStatusLabel(activeRun.status)}{activeRun.stage ? ` · ${activeRun.stage}` : ''}</span>}
+        {activeRun && <span className="snode-run-state">{activeRun.status === 'cancel_requested' ? '중단 확인 대기' : runStatusLabel(activeRun.status)}</span>}
+        {!activeRun && <span className="snode-run-state">{node.status === 'ready' ? '입력 확인됨' : node.status === 'draft' ? '입력 필요' : '상태 확인'}</span>}
         {!activeRun && latestRun?.status === 'failed' && <span className="snode-run-state bad">실행 실패</span>}
         {node.results.length > 0 && <span className="snode-run-state ok">후보 {node.results.length}</span>}
-        {spec.executionStage !== null ? (
+        {spec.executionStage !== null && node.status !== 'done' ? (
           <button
             className="snode-run"
-            disabled={!isRunnable(node.kind) || Boolean(activeRun)}
-            title={isRunnable(node.kind)
-              ? '이 노드를 실행합니다'
-              : `실행 연결은 ${spec.executionStage}단계에서 추가됩니다.`}
+            disabled={!isRunnable(node.kind) || Boolean(activeRun) || node.status === 'draft'}
+            title={!isRunnable(node.kind) ? '연결된 실행 도구가 없습니다.' : activeRun ? '이미 실행 중입니다.' : node.status === 'draft' ? '필수 입력을 먼저 작성하세요.' : node.status === 'failed' ? latestRun?.errorMessage || '실패 원인을 확인한 뒤 다시 실행하세요.' : '입력과 계정 상태를 확인해 실행합니다.'}
             onClick={(event) => {
               event.stopPropagation()
               void startStudioRun(node.id).then((result) => {
@@ -161,10 +160,10 @@ export function NodeCard({ data, selected }: NodeProps<StudioFlowNode>) {
             }}
           >
             <Play size={10} fill="currentColor" />
-            {activeRun ? '실행 중' : '실행'}
+            {activeRun ? '실행 중' : node.status === 'stale' || node.status === 'failed' ? '다시 실행' : '실행'}
           </button>
         ) : (
-          <span className="snode-note">구성 노드</span>
+          <span className="snode-note">{node.status === 'done' ? '후보 확인' : '구성 노드'}</span>
         )}
       </footer>
     </div>

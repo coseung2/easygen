@@ -1,0 +1,26 @@
+{
+  "id": "cast-card-writer",
+  "version": "1.0",
+  "status": "candidate",
+  "inputs": {
+    "captions": "Text",
+    "records": "Json",
+    "user_traits": "Text"
+  },
+  "output": {
+    "type": "Json",
+    "schema": "schema.json"
+  },
+  "model": {
+    "provider": "chatgpt-oauth",
+    "name": null,
+    "temperature": 0.5
+  },
+  "reads": [],
+  "files": {
+    "schema.json": "sha256:6a0a5e7e61a4a1473d098377c293d6da310c6453c8961a66c17c3cdc72055bfa",
+    "system.md": "sha256:c872dab48f41e52c2060916735fa64c127beff590e0f62558ea14e8a6756637b"
+  },
+  "origin": "Local Lab evaluation (source brief is not published)",
+  "released_at": null
+}

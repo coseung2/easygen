@@ -45,6 +45,7 @@ import {
 import { evaluateConnection } from './graph'
 import { applyPipelineEvent, applyWorkerEvent, reconcileRuns } from './runController'
 import { useStudioStore, type AssetInput } from './store'
+import { browserCapability, confirmProtectedAction } from '../ux/stageOne'
 import { emptyDocument, normalizeDocument, type ConnectionKind, type NodeKind, type StudioProjectRecord, type StudioProjectSummary } from './types'
 
 const LAST_PROJECT_KEY = 'modal-gui.studio.lastProject'
@@ -64,7 +65,7 @@ export function StudioPage() {
   const openRecord = React.useCallback((record: StudioProjectRecord) => {
     const parsed = normalizeDocument(JSON.parse(record.documentJson) as unknown)
     useStudioStore.getState().openProject({ id: record.id, name: record.name, revision: record.revision, doc: parsed })
-    localStorage.setItem(LAST_PROJECT_KEY, record.id)
+    if (isTauri) localStorage.setItem(LAST_PROJECT_KEY, record.id)
     setMode('workspace')
     // 저장된 실행 기록을 읽어 완료된 결과를 후보로 복구한다.
     void reconcileRuns(record.id)
@@ -82,7 +83,7 @@ export function StudioPage() {
             return
           }
         } catch {
-          localStorage.removeItem(LAST_PROJECT_KEY)
+          if (isTauri) localStorage.removeItem(LAST_PROJECT_KEY)
         }
       }
       try {
@@ -97,6 +98,7 @@ export function StudioPage() {
   }, [openRecord])
 
   const create = async (name: string) => {
+    if (!isTauri) return setError(browserCapability('persistProject').reason)
     setBusy(true)
     setError('')
     try {
@@ -123,6 +125,10 @@ export function StudioPage() {
   }
 
   const remove = async (id: string) => {
+    if (!isTauri) return setError(browserCapability('persistProject').reason)
+    const project = projects.find((item) => item.id === id)
+    const label = project ? `“${project.name}” 프로젝트` : '이 프로젝트'
+    if (!confirmProtectedAction(`${label}를 삭제합니다. 노드 ${project?.nodeCount ?? 0}개와 소재 ${project?.assetCount ?? 0}개의 연결이 프로젝트 목록에서 사라집니다.`)) return
     try {
       await deleteProject(id)
       if (localStorage.getItem(LAST_PROJECT_KEY) === id) localStorage.removeItem(LAST_PROJECT_KEY)
@@ -133,6 +139,7 @@ export function StudioPage() {
   }
 
   const importFromFolder = async () => {
+    if (!isTauri) return setError(browserCapability('persistProject').reason)
     setError('')
     try {
       const dir = await pickDirectory('내보낸 프로젝트 폴더 선택')
@@ -163,7 +170,7 @@ export function StudioPage() {
   if (mode === 'workspace') {
     return (
       <ReactFlowProvider>
-        <StudioWorkspace onExit={exitWorkspace} />
+        <StudioWorkspace onExit={exitWorkspace} onExitError={setError} />
       </ReactFlowProvider>
     )
   }
@@ -185,8 +192,9 @@ export function StudioPage() {
   )
 }
 
-function StudioWorkspace({ onExit }: { onExit: () => Promise<void> }) {
+function StudioWorkspace({ onExit, onExitError }: { onExit: () => Promise<void>; onExitError: (message: string) => void }) {
   const reactFlow = useReactFlow()
+  const projectId = useStudioStore((state) => state.projectId)
   const projectName = useStudioStore((state) => state.projectName)
   const doc = useStudioStore((state) => state.doc)
   const dirty = useStudioStore((state) => state.dirty)
@@ -198,17 +206,60 @@ function StudioWorkspace({ onExit }: { onExit: () => Promise<void> }) {
   const notice = useStudioStore((state) => state.notice)
   const setNotice = React.useCallback((message: string) => useStudioStore.getState().setNotice(message), [])
   const [dropActive, setDropActive] = React.useState(false)
-  const [leftOpen, setLeftOpen] = React.useState(true)
-  const [rightOpen, setRightOpen] = React.useState(true)
-  const [timelineOpen, setTimelineOpen] = React.useState(true)
+  const panelKey = `modal-gui.studio.panels.${projectId || 'new'}`
+  const [panels, setPanels] = React.useState({ left: false, right: false, timeline: false, storyboard: false })
   const fileInputRef = React.useRef<HTMLInputElement | null>(null)
   const canvasRef = React.useRef<HTMLDivElement | null>(null)
   const savingRef = React.useRef(false)
   const pendingRef = React.useRef(false)
+  React.useEffect(() => {
+    const raw = localStorage.getItem(panelKey)
+    if (!raw) return
+    try {
+      const parsed = JSON.parse(raw) as typeof panels
+      if (window.innerWidth < 1180) {
+        const opened = (['left', 'right', 'timeline', 'storyboard'] as const).filter((key) => parsed[key])
+        for (const key of opened.slice(1)) parsed[key] = false
+      }
+      setPanels(parsed)
+    } catch { localStorage.removeItem(panelKey) }
+  }, [panelKey])
+  React.useEffect(() => {
+    const onResize = () => {
+      if (window.innerWidth >= 1180) return
+      setPanels((current) => {
+        const opened = (['left', 'right', 'timeline', 'storyboard'] as const).filter((key) => current[key])
+        if (opened.length <= 1) return current
+        const next = { ...current }
+        for (const key of opened.slice(1)) next[key] = false
+        localStorage.setItem(panelKey, JSON.stringify(next))
+        return next
+      })
+    }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [panelKey])
+  const updatePanels = (patch: Partial<typeof panels>) => {
+    setPanels((current) => {
+      const next = { ...current, ...patch }
+      const narrow = window.innerWidth < 1180
+      if (narrow) {
+        const opened = (['left', 'right', 'timeline', 'storyboard'] as const).find((key) => patch[key] && next[key])
+        if (opened) for (const key of ['left', 'right', 'timeline', 'storyboard'] as const) if (key !== opened) next[key] = false
+      }
+      localStorage.setItem(panelKey, JSON.stringify(next))
+      return next
+    })
+  }
+  const selection = useStudioStore((state) => state.selection)
+  React.useEffect(() => {
+    if (selection) updatePanels({ right: true })
+  }, [selection])
   // 연속 추가할 때 노드가 겹치지 않도록 화면 중앙 기준으로 배치 순서를 센다.
   const placementRef = React.useRef(0)
 
   const saveNow = React.useCallback(async () => {
+    if (!isTauri) return
     if (savingRef.current) {
       pendingRef.current = true
       return
@@ -238,6 +289,36 @@ function StudioWorkspace({ onExit }: { onExit: () => Promise<void> }) {
     } finally {
       savingRef.current = false
     }
+  }, [])
+
+  const requestExit = async () => {
+    const state = useStudioStore.getState()
+    if (state.saveState === 'saving') {
+      onExitError('저장이 끝난 뒤 프로젝트 목록으로 돌아갈 수 있습니다. 저장을 다시 시도하세요.')
+      return
+    }
+    if (state.saveState === 'error' || state.dirty) {
+      const retry = window.confirm(state.saveState === 'error' ? `저장에 실패했습니다: ${state.saveError}\n다시 저장한 뒤 나갈까요?` : '저장되지 않은 변경이 있습니다. 저장한 뒤 나갈까요?')
+      if (retry) {
+        await saveNow()
+        if (useStudioStore.getState().saveState === 'error' || useStudioStore.getState().dirty) return
+      } else if (!confirmProtectedAction('저장하지 않고 프로젝트 목록으로 돌아갑니다. 저장되지 않은 변경은 현재 화면에서 사라집니다.')) {
+        return
+      }
+    }
+    await onExit()
+  }
+
+  React.useEffect(() => {
+    const onLeave = (event: BeforeUnloadEvent) => {
+      const state = useStudioStore.getState()
+      if (state.dirty || state.saveState === 'saving' || state.saveState === 'error') {
+        event.preventDefault()
+        event.returnValue = ''
+      }
+    }
+    window.addEventListener('beforeunload', onLeave)
+    return () => window.removeEventListener('beforeunload', onLeave)
   }, [])
 
   // 자동 저장: 편집이 멈추고 2.5초 뒤에 저장한다. 실행 결과 저장과는 별개다.
@@ -325,6 +406,7 @@ function StudioWorkspace({ onExit }: { onExit: () => Promise<void> }) {
 
   // 내보내기: 제작 문서와 선택 소재를 폴더로 복사한다. 인증값은 포함하지 않는다.
   const exportToFolder = React.useCallback(async () => {
+    if (!isTauri) return setNotice(browserCapability('persistProject').reason)
     const state = useStudioStore.getState()
     if (!state.projectId) return
     try {
@@ -417,7 +499,7 @@ function StudioWorkspace({ onExit }: { onExit: () => Promise<void> }) {
   return (
     <div className="studio-shell">
       <header className="studio-topbar">
-        <button className="secondary-action small" onClick={() => void onExit()}>← 프로젝트 목록</button>
+        <button className="secondary-action small" onClick={() => void requestExit()}>← 프로젝트 목록</button>
         <input
           className="studio-name"
           value={projectName}
@@ -427,23 +509,23 @@ function StudioWorkspace({ onExit }: { onExit: () => Promise<void> }) {
         <span className={`save-chip ${saveState}`}>{saveChip}</span>
         <div className="studio-topbar-right">
           <button
-            className={leftOpen ? 'icon-button active' : 'icon-button'}
-            title={leftOpen ? '왼쪽 패널 접기' : '왼쪽 패널 펼치기'}
-            onClick={() => setLeftOpen((value) => !value)}
+            className={panels.left ? 'icon-button active' : 'icon-button'}
+            title={panels.left ? '왼쪽 패널 접기' : '왼쪽 패널 펼치기'}
+            onClick={() => updatePanels({ left: !panels.left })}
           >
             <PanelLeft size={15} />
           </button>
           <button
-            className={rightOpen ? 'icon-button active' : 'icon-button'}
-            title={rightOpen ? '오른쪽 패널 접기' : '오른쪽 패널 펼치기'}
-            onClick={() => setRightOpen((value) => !value)}
+            className={panels.right ? 'icon-button active' : 'icon-button'}
+            title={panels.right ? '오른쪽 패널 접기' : '오른쪽 패널 펼치기'}
+            onClick={() => updatePanels({ right: !panels.right })}
           >
             <PanelRight size={15} />
           </button>
           <button
-            className={timelineOpen ? 'icon-button active' : 'icon-button'}
-            title={timelineOpen ? '타임라인 접기' : '타임라인 펼치기'}
-            onClick={() => setTimelineOpen((value) => !value)}
+            className={panels.storyboard ? 'icon-button active' : 'icon-button'}
+            title={panels.storyboard ? '스토리보드 접기' : '스토리보드 펼치기'}
+            onClick={() => updatePanels({ storyboard: !panels.storyboard })}
           >
             <Timer size={15} />
           </button>
@@ -465,7 +547,7 @@ function StudioWorkspace({ onExit }: { onExit: () => Promise<void> }) {
       </header>
 
       <div className="studio-body">
-        {leftOpen && <LeftPanel onAddNode={addNodeAtCenter} onImportAssets={() => void handleImport()} />}
+        {panels.left && <LeftPanel onAddNode={addNodeAtCenter} onImportAssets={() => void handleImport()} />}
 
         <div
           className="studio-canvas"
@@ -490,7 +572,9 @@ function StudioWorkspace({ onExit }: { onExit: () => Promise<void> }) {
           {doc.nodes.length === 0 && (
             <div className="canvas-empty">
               <strong>빈 캔버스</strong>
-              <p>왼쪽 패널에서 노드를 추가하거나, 이미지·영상 파일을 끌어다 놓아 소재를 등록하세요.</p>
+              <button className="primary-action" onClick={() => addNodeAtCenter('brief')}>첫 노드 추가</button>
+              <button className="secondary-action" onClick={() => void handleImport()}>소재 가져오기</button>
+              <button className="secondary-action" onClick={() => useStudioStore.getState().addShot()}>샷 추가</button>
             </div>
           )}
           {dropActive && <div className="drop-overlay">파일을 놓으면 프로젝트 소재로 등록됩니다</div>}
@@ -502,7 +586,7 @@ function StudioWorkspace({ onExit }: { onExit: () => Promise<void> }) {
           )}
         </div>
 
-        {rightOpen && (
+        {panels.right && (
           <aside className="studio-right">
             <Inspector
               onImportAssets={() => void handleImport()}
@@ -514,14 +598,14 @@ function StudioWorkspace({ onExit }: { onExit: () => Promise<void> }) {
         )}
       </div>
 
-      {timelineOpen && (
+      {panels.timeline && (
         <TimelinePanel
           onReveal={(path) => { void revealInExplorer(path).catch(() => setNotice('폴더를 열 수 없습니다: ' + path)) }}
           onNotice={setNotice}
         />
       )}
 
-      <StoryboardBar onExpandShot={expandShot} />
+      {panels.storyboard && <StoryboardBar onExpandShot={expandShot} />}
 
       <input
         ref={fileInputRef}

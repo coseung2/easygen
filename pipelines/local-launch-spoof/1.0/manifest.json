@@ -1,0 +1,62 @@
+{
+  "id": "local-launch-spoof",
+  "version": "1.0",
+  "status": "candidate",
+  "kind": "video",
+  "engine": "local-python",
+  "label": "제품 런칭 패러디",
+  "summary": "사진·영상 몇 장으로 신제품 출시 광고처럼 발랄하게 소개하는 9:16 · 22초 영상",
+  "tone": "playful",
+  "inputs": {
+    "name": "required · 주인공 이름",
+    "scenes.reveal.media": "required · 대표 사진 1장",
+    "scenes.spec_zoom.media": "required · 확대할 부위가 보이는 사진/영상 (at: 영상 초)",
+    "scenes.spec_loupe.media": "required · 옆모습 사진 (point 비우면 자동 탐지)",
+    "scenes.gag_launch.media": "required · 개그 컷 사진",
+    "scenes.gag_launch.sound_media": "optional · 효과음 원본 영상과 sound_at 초",
+    "scenes.meter": "required · from/to 수치와 단위",
+    "scenes.burst.items": "required · 6개 (사진, 제목, 부제)",
+    "palette": "optional · neon | warm | pastel",
+    "cutout_model": "optional · bria-rmbg (비상업) | birefnet-general (MIT)"
+  },
+  "outputs": {
+    "video": "mp4 1080x1920 30fps 22s",
+    "metadata": "<output>.metadata.json"
+  },
+  "schema": "job.schema.json",
+  "runtime": {
+    "python": "lab venv with rembg[cpu]==2.0.67, numpy<2.3, scipy, pillow",
+    "ffmpeg": "8.1.1",
+    "fonts": [
+      "_shared/fonts/BlackHanSans-Regular.ttf (OFL)",
+      "GmarketSansTTFBold",
+      "Pretendard"
+    ],
+    "cutout_models": {
+      "bria-rmbg": "CC BY-NC 4.0",
+      "birefnet-general": "MIT"
+    },
+    "shared": [
+      "_shared/motionkit.py",
+      "_shared/cutout.py",
+      "_shared/sfx.py",
+      "_shared/music_bouncy.py",
+      "_shared/fonts/BlackHanSans-Regular.ttf"
+    ]
+  },
+  "prompts": {
+    "copy": "cast-card-writer@1.0"
+  },
+  "files": {
+    "job.schema.json": "sha256:8e47f086e0c49b912fc74e9fb68f716f5399200b2c14fe923b26e9ef9c6727da",
+    "render.py": "sha256:162336150da58ef568b1e66f429446daec14a634226ed8c8bbfa4d599305ddf6",
+    "_shared/motionkit.py": "sha256:a5e509e8dfdfb3855958f206c64267522d281a7f55ac5f907f74eb630c18cb6e",
+    "_shared/cutout.py": "sha256:a347f00f6133bddb1fdd3fbe7605fe2d2114644edb3db9aacd4fc0554dcf7bd7",
+    "_shared/sfx.py": "sha256:6bf6555393e72c2b2753a1efdb9ea88f696a6b1696848ae56eb9a1a3018fbfa0",
+    "_shared/music_bouncy.py": "sha256:3ab4edce5f796065a87dca252fe2b581dd003f75723a8f6bb68490358aeba1f3",
+    "_shared/fonts/BlackHanSans-Regular.ttf": "sha256:31960809284026681774a8e52dc19ebcad26cf69b0ad9d560f288296fbb52739"
+  },
+  "origin": "Local Lab evaluation (media and verdict are not published)",
+  "released_at": null,
+  "notes": "Lab 합격 1회. 제5조 §5에 따라 두 번째 합격 전까지 candidate."
+}

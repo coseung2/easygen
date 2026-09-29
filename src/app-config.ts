@@ -59,7 +59,7 @@ export const navItems: Array<{ id: Page; label: string; icon: React.ComponentTyp
   { id: 'Studio', label: '제작 스튜디오', icon: Workflow },
   { id: 'Generate', label: '새 작업', icon: Wand2 },
   { id: 'Jobs', label: '작업 큐', icon: ListTodo },
-  { id: 'Edit', label: '편집 · 모션', icon: Scissors },
+  { id: 'Edit', label: '보조 편집', icon: Scissors },
   { id: 'Results', label: '결과물', icon: MonitorPlay },
   { id: 'Usage', label: '사용량', icon: BarChart3 },
   { id: 'Connections', label: '연결 관리', icon: Cable },

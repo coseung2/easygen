@@ -8,10 +8,12 @@ mod jobs;
 mod media;
 mod paths;
 mod pipeline;
+mod storage_paths;
 mod studio;
 mod studio_export;
 mod studio_run;
 mod studio_templates;
+mod templates;
 mod usage;
 mod workflows;
 
@@ -40,6 +42,17 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
+            // The asset protocol is restricted to the selected local data root.
+            // User-configured output roots are explicit exceptions for imported media previews.
+            let asset_scope = app.asset_protocol_scope();
+            asset_scope.allow_directory(paths::data_root(), true)?;
+            for key in ["MODAL_GUI_MUSIC_ROOT", "MODAL_GUI_OUTPUT_ROOT"] {
+                if let Some(path) = std::env::var_os(key).map(std::path::PathBuf::from) {
+                    if path.is_absolute() {
+                        asset_scope.allow_directory(path, true)?;
+                    }
+                }
+            }
             let path = app.path().app_data_dir()?.join("database");
             std::fs::create_dir_all(&path)?;
             let conn = Connection::open(path.join("app.db"))?;
@@ -59,6 +72,7 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             health,
+            storage_paths::storage_paths,
             jobs::create_job,
             jobs::start_job,
             jobs::start_music,
@@ -83,6 +97,8 @@ fn main() {
             pipeline::render_spec,
             pipeline::build_storyboard,
             pipeline::list_renderers,
+            templates::template_list,
+            templates::template_render,
             studio::studio_list_projects,
             studio::studio_create_project,
             studio::studio_load_project,

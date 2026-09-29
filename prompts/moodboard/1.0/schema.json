@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "moodboard@1.0/output",
+  "type": "object",
+  "required": ["scene", "grid", "concepts", "references"],
+  "properties": {
+    "scene": { "type": "string" },
+    "grid": { "type": "string" },
+    "references": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "used_by"],
+        "properties": {
+          "path": { "type": "string" },
+          "used_by": { "type": "string" }
+        }
+      }
+    },
+    "concepts": {
+      "type": "array", "minItems": 6, "maxItems": 6,
+      "items": {
+        "type": "object",
+        "required": ["n", "name", "tone", "route"],
+        "properties": {
+          "n": { "type": "integer", "minimum": 1, "maximum": 6 },
+          "name": { "type": "string", "maxLength": 16 },
+          "tone": { "type": "string", "maxLength": 60 },
+          "color": { "type": "string" },
+          "material": { "type": "string" },
+          "light": { "type": "string" },
+          "type": { "type": "string" },
+          "motion": { "type": "string" },
+          "route": { "enum": ["kinetic", "h3", "mix"] },
+          "evidence": { "type": "string" },
+          "ref": { "type": "string" },
+          "approved": { "type": "boolean" }
+        }
+      }
+    }
+  }
+}

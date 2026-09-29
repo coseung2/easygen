@@ -1,4 +1,4 @@
-"""Build an evidence-backed H3/YuE2 usage report for F:."""
+"""Build an evidence-backed H3/YuE2 usage report from local data."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ import json
 import subprocess
 from datetime import datetime
 from pathlib import Path
+from lab_paths import data_path
 
 
 def duration(path: Path) -> float:
@@ -40,12 +41,12 @@ REMOTE_CREATED_AT = {
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--output-dir", type=Path, default=Path(r"F:\modal-gui\reports"))
+    parser.add_argument("--output-dir", type=Path, default=data_path("reports"))
     parser.add_argument("--h3-app-cost", type=float, required=True, help="H3 cost for the 08:00-10:00 work window")
     parser.add_argument("--yue2-app-cost", type=float, required=True, help="YuE2 cost for the 08:00-10:00 work window")
     args = parser.parse_args()
 
-    clips_root = Path(r"F:\modal-gui\h3-clips")
+    clips_root = data_path("h3-clips")
     clips = sorted(clips_root.glob("generated/*.mp4")) + sorted(clips_root.glob("smoke/*.mp4"))
     rows = []
     for path in clips:
@@ -65,8 +66,8 @@ def main() -> None:
             "per_clip_credit_note": "Modal billing report exposes app/hour resources, not per-invocation credits.",
         })
 
-    final_path = Path(r"F:\modal-gui\deliverables\pubg-update43-1-60s-yue2-v1.mp4")
-    yue_path = Path(r"F:\modal-gui\music\yue2\pubg-update43-1-yue2-4301\audio.flac")
+    final_path = data_path("deliverables", "pubg-update43-1-60s-yue2-v1.mp4")
+    yue_path = data_path("music", "yue2", "pubg-update43-1-yue2-4301", "audio.flac")
     variant_rows = [row for row in rows if row["kind"] == "variant"]
     smoke_rows = [row for row in rows if row["kind"] == "smoke"]
     work_total = args.h3_app_cost + args.yue2_app_cost

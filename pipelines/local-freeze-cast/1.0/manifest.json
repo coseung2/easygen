@@ -1,0 +1,57 @@
+{
+  "id": "local-freeze-cast",
+  "version": "1.0",
+  "status": "candidate",
+  "kind": "video",
+  "engine": "local-python",
+  "label": "프리즈 프레임 캐릭터 인트로",
+  "summary": "영상이 찰칵 멈추며 인물을 스티커로 따내고 예능 등장인물처럼 소개하는 9:16 영상 (1.6 + 3.2×인원 + 3.2초)",
+  "tone": "playful",
+  "inputs": {
+    "name": "required · 주인공 이름",
+    "cast[]": "required · 1–6개: media(영상/사진), freeze_at(영상 초), role, gag, label",
+    "title / subtitle / outro_title / outro_tag": "optional",
+    "palette": "optional · neon | warm | pastel",
+    "cutout_model": "optional · bria-rmbg (비상업) | birefnet-general (MIT)"
+  },
+  "outputs": {
+    "video": "mp4 1080x1920 30fps",
+    "metadata": "<output>.metadata.json"
+  },
+  "schema": "job.schema.json",
+  "runtime": {
+    "python": "lab venv with rembg[cpu]==2.0.67, numpy<2.3, scipy, pillow",
+    "ffmpeg": "8.1.1",
+    "fonts": [
+      "_shared/fonts/BlackHanSans-Regular.ttf (OFL)",
+      "GmarketSansTTFBold",
+      "Pretendard"
+    ],
+    "cutout_models": {
+      "bria-rmbg": "CC BY-NC 4.0",
+      "birefnet-general": "MIT"
+    },
+    "shared": [
+      "_shared/motionkit.py",
+      "_shared/cutout.py",
+      "_shared/sfx.py",
+      "_shared/music_chiptune.py",
+      "_shared/fonts/BlackHanSans-Regular.ttf"
+    ]
+  },
+  "prompts": {
+    "copy": "cast-card-writer@1.0"
+  },
+  "files": {
+    "job.schema.json": "sha256:cdb6de7282503a799cf6ec71cefb8a1eb5197c2fa5fa2368dac137dd2251a1d3",
+    "render.py": "sha256:0112cc4ac3b886b4fb603aa413be071b7f555882c8fe0be857c8225bc7d66cd8",
+    "_shared/motionkit.py": "sha256:a5e509e8dfdfb3855958f206c64267522d281a7f55ac5f907f74eb630c18cb6e",
+    "_shared/cutout.py": "sha256:a347f00f6133bddb1fdd3fbe7605fe2d2114644edb3db9aacd4fc0554dcf7bd7",
+    "_shared/sfx.py": "sha256:6bf6555393e72c2b2753a1efdb9ea88f696a6b1696848ae56eb9a1a3018fbfa0",
+    "_shared/music_chiptune.py": "sha256:3f42bd3629bd23ec2369bdf681a02094064a5635423d873f05aa38d50f59f754",
+    "_shared/fonts/BlackHanSans-Regular.ttf": "sha256:31960809284026681774a8e52dc19ebcad26cf69b0ad9d560f288296fbb52739"
+  },
+  "origin": "Local Lab evaluation (media and verdict are not published)",
+  "released_at": null,
+  "notes": "Lab 합격 1회. 제5조 §5에 따라 두 번째 합격 전까지 candidate."
+}

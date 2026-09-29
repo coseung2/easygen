@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 import modal
+from lab_paths import data_path
 
 DEFAULT_ATTESTATION = "minimax-h3-use-authorized-by-minimax"
 
@@ -33,7 +34,7 @@ def main() -> None:
     parser.add_argument("--height", type=int, default=768)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--job-id", default="")
-    parser.add_argument("--out-root", default=r"F:\modal-gui\h3-clips\generated")
+    parser.add_argument("--out-root", default=str(data_path("h3-clips", "generated")))
     parser.add_argument("--out-name", default="")
     parser.add_argument("--manifest", default="")
     args = parser.parse_args()

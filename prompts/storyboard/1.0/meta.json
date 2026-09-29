@@ -1,0 +1,29 @@
+{
+  "id": "storyboard",
+  "version": "1.0",
+  "status": "candidate",
+  "inputs": {
+    "brief": "Brief",
+    "style": "StyleGuide",
+    "refs": "ReferenceCard[]"
+  },
+  "output": {
+    "type": "ShotList",
+    "schema": "schema.json"
+  },
+  "model": {
+    "provider": "chatgpt-oauth",
+    "name": null,
+    "temperature": 0.4
+  },
+  "reads": [
+    "docs/constitution/04-execution-routing.md",
+    "docs/creative/approved-directions.md"
+  ],
+  "files": {
+    "schema.json": "sha256:d90fe9c641a2f63a017c58a455b960e1f78acd056679afef3e7048574dbec2af",
+    "system.md": "sha256:9396010c555e21fb25b6b832cf9828504bf8f6e82978c61f01e463943f77889b"
+  },
+  "origin": "사용자 지시 (2026-09-28) — 승격 전, Lab 적용 대기",
+  "released_at": null
+}

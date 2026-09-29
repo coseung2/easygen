@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "local-launch-spoof@1.0/job",
+  "type": "object",
+  "required": ["name", "output", "scenes"],
+  "properties": {
+    "name": { "type": "string", "minLength": 1, "maxLength": 12 },
+    "output": { "type": "string" },
+    "palette": { "enum": ["neon", "warm", "pastel"] },
+    "cutout_model": { "enum": ["bria-rmbg", "birefnet-general", "isnet-general-use"] },
+    "scenes": {
+      "type": "object",
+      "required": ["reveal", "spec_zoom", "spec_loupe", "gag_launch", "meter", "burst"],
+      "properties": {
+        "hook": { "type": "object", "properties": {
+          "badge": { "type": "string" }, "lines": { "type": "array", "items": { "type": "string" }, "maxItems": 2 },
+          "sub": { "type": "string" } } },
+        "reveal": { "type": "object", "required": ["media"], "properties": {
+          "media": { "type": "string" }, "latin": { "type": "string" },
+          "specs": { "type": "array", "items": { "type": "string" }, "maxItems": 3 } } },
+        "spec_zoom": { "type": "object", "required": ["media"], "properties": {
+          "media": { "type": "string" }, "at": { "type": "number" },
+          "focus": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
+          "marks": { "type": "array", "items": { "type": "array", "items": { "type": "number" } }, "maxItems": 3 },
+          "title": { "type": "array", "items": { "type": "string" }, "maxItems": 2 }, "tag": { "type": "string" } } },
+        "spec_loupe": { "type": "object", "required": ["media"], "properties": {
+          "media": { "type": "string" },
+          "sticker_center": { "type": "array", "items": { "type": "number" } },
+          "point": { "type": ["array", "null"], "items": { "type": "number" } },
+          "meter_label": { "type": "string" },
+          "title": { "type": "array", "items": { "type": "string" }, "maxItems": 2 }, "tag": { "type": "string" } } },
+        "gag_launch": { "type": "object", "required": ["media"], "properties": {
+          "media": { "type": "string" }, "sound_media": { "type": "string" }, "sound_at": { "type": "number" },
+          "setup": { "type": "string" }, "hit": { "type": "string" }, "title": { "type": "string" },
+          "tag": { "type": "string" } } },
+        "meter": { "type": "object", "required": ["media", "from", "to"], "properties": {
+          "media": { "type": "string" }, "from": { "type": "number" }, "to": { "type": "number" },
+          "decimals": { "type": "integer", "minimum": 0, "maximum": 3 }, "tick": { "type": "number" },
+          "unit": { "type": "string" }, "from_label": { "type": "string" }, "to_label": { "type": "string" },
+          "title": { "type": "string" }, "tag": { "type": "string" } } },
+        "burst": { "type": "object", "required": ["items"], "properties": {
+          "items": { "type": "array", "minItems": 1, "maxItems": 6, "items": {
+            "type": "object", "required": ["media", "title"], "properties": {
+              "media": { "type": "string" }, "title": { "type": "string" }, "sub": { "type": "string" } } } } } },
+        "endcard": { "type": "object", "properties": {
+          "kicker": { "type": "string" }, "title": { "type": "string" }, "tag": { "type": "string" },
+          "footnote": { "type": "string" } } }
+      }
+    }
+  }
+}

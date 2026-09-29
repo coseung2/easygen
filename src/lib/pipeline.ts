@@ -106,11 +106,22 @@ export type RendererInfo = {
   notes: string | null
 }
 
-export const DELIVERABLES_ROOT = 'F:\\modal-gui\\deliverables'
+export type StoragePaths = {
+  clips: string
+  music: string
+  deliverables: string
+  thumbs: string
+  edits: string
+  studio: string
+}
 
-export const THUMBS_ROOT = 'F:\\modal-gui\\thumbs'
+/** Only the native backend decides the local storage location. */
+export const getStoragePaths = () => call<StoragePaths>('storage_paths')
 
-export const EDITS_ROOT = 'F:\\modal-gui\\edits'
+export function childPath(root: string, ...parts: string[]): string {
+  const separator = root.includes('\\') ? '\\' : '/'
+  return [root.replace(/[\\/]+$/, ''), ...parts].join(separator)
+}
 
 export const listPipelineInputs = (clipsRoot?: string) =>
   call<PipelineInputs>('list_pipeline_inputs', { clipsRoot: clipsRoot || null })

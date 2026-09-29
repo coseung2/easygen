@@ -107,7 +107,7 @@ pub(crate) fn read_json_file(path: String) -> Result<Value, String> {
 }
 
 /// Extracts one frame so the result grid can show real thumbnails. Cached by
-/// file name plus a path tag under `F:\modal-gui\thumbs`, so two files with the
+/// file name plus a path tag under the local data root's `thumbs`, so two files with the
 /// same name in different folders never share a thumbnail. The caller falls
 /// back to a video poster frame when ffmpeg is unavailable.
 #[tauri::command]

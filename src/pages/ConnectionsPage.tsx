@@ -2,6 +2,7 @@
 import React from 'react'
 import { Boxes, Cable, Play, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { isTauri } from '../lib/tauri'
+import { browserCapability, confirmProtectedAction } from '../ux/stageOne'
 import {
   cancelLogin,
   ensureFresh,
@@ -21,6 +22,7 @@ import {
   saveConnection,
   setConnectionEnabled,
   setConnectionToolEnabled,
+  callConnectionTool,
   testConnection,
   type ConnectionRow,
   type ConnectionToolRow,
@@ -62,6 +64,7 @@ export function ConnectionsPage() {
   const [workflowTool, setWorkflowTool] = React.useState('modal-h3')
   const [workflowLocation, setWorkflowLocation] = React.useState('')
   const [workflowNotes, setWorkflowNotes] = React.useState('')
+  const [section, setSection] = React.useState<'connections' | 'accounts' | 'workflows'>('connections')
 
   const refresh = React.useCallback(async () => {
     if (!isTauri) {
@@ -93,6 +96,7 @@ export function ConnectionsPage() {
   }, [refreshWorkflows])
 
   const createWorkflow = async () => {
+    if (!isTauri) return setError(browserCapability('callExternalService').reason)
     setError('')
     setNotice('')
     try {
@@ -113,6 +117,8 @@ export function ConnectionsPage() {
   }
 
   const removeWorkflow = async (workflow: WorkflowRow) => {
+    if (!isTauri) return setError(browserCapability('persistProject').reason)
+    if (!confirmProtectedAction(`“${workflow.name}” 워크플로 등록을 삭제합니다. 프로젝트의 실행 기록은 남지만 이 워크플로를 다시 선택하려면 등록해야 합니다.`)) return
     try {
       await deleteWorkflow(workflow.id)
       await refreshWorkflows()
@@ -166,6 +172,7 @@ export function ConnectionsPage() {
   }, [attempt, refreshAccounts])
 
   const startLogin = async () => {
+    if (!isTauri) return setError(browserCapability('callExternalService').reason)
     setError('')
     setNotice('')
     try {
@@ -200,6 +207,7 @@ export function ConnectionsPage() {
   }
 
   const refreshAccount = async (account: ChatGptAccount) => {
+    if (!isTauri) return setError(browserCapability('callExternalService').reason)
     setError('')
     try {
       const updated = await ensureFresh(account.id)
@@ -212,6 +220,8 @@ export function ConnectionsPage() {
   }
 
   const removeAccount = async (account: ChatGptAccount) => {
+    if (!isTauri) return setError(browserCapability('persistProject').reason)
+    if (!confirmProtectedAction(`${account.email ?? account.displayName ?? account.id} 계정 연결과 저장된 토큰을 삭제합니다.`)) return
     try {
       await logoutChatGpt(account.id)
       setNotice('계정 연결을 해제했습니다. 보관하던 토큰도 삭제했습니다.')
@@ -222,6 +232,7 @@ export function ConnectionsPage() {
   }
 
   const create = async () => {
+    if (!isTauri) return setError(browserCapability('callExternalService').reason)
     setError('')
     setNotice('')
     const config: Record<string, unknown> = kind === 'mcp-http'
@@ -250,6 +261,7 @@ export function ConnectionsPage() {
   }
 
   const runTest = async (connection: ConnectionRow) => {
+    if (!isTauri) return setError(browserCapability('callExternalService').reason)
     setBusy(connection.id)
     setError('')
     setNotice('')
@@ -278,8 +290,23 @@ export function ConnectionsPage() {
       setBusy('')
     }
   }
+  const verifyTool = async (connection: ConnectionRow) => {
+    try {
+      const cached = tools[connection.id] ?? []
+      const available = cached.length > 0 ? cached : await listConnectionTools(connection.id)
+      if (cached.length === 0) setTools((current) => ({ ...current, [connection.id]: available }))
+      const tool = available.find((item) => item.enabled)
+      if (!tool) return setError('실행 검증할 사용 중인 도구가 없습니다. 도구를 먼저 확인하세요.')
+      await callConnectionTool(connection.id, tool.name, {})
+      setNotice(`${tool.name} 실제 호출을 검증했습니다.`)
+      await refresh()
+    } catch (verifyError) {
+      setError(String(verifyError))
+    }
+  }
 
   const toggleTool = async (connection: ConnectionRow, tool: ConnectionToolRow) => {
+    if (!isTauri) return setError(browserCapability('persistProject').reason)
     try {
       await setConnectionToolEnabled(connection.id, tool.name, !tool.enabled)
       setTools((current) => ({
@@ -292,6 +319,7 @@ export function ConnectionsPage() {
   }
 
   const toggleEnabled = async (connection: ConnectionRow) => {
+    if (!isTauri) return setError(browserCapability('persistProject').reason)
     try {
       await setConnectionEnabled(connection.id, !connection.enabled)
       await refresh()
@@ -301,6 +329,8 @@ export function ConnectionsPage() {
   }
 
   const remove = async (connection: ConnectionRow) => {
+    if (!isTauri) return setError(browserCapability('persistProject').reason)
+    if (!confirmProtectedAction(`“${connection.name}” 연결과 저장된 도구 ${connection.toolCount}개를 삭제합니다. 프로젝트 문서와 실행 기록은 남습니다.`)) return
     try {
       await deleteConnection(connection.id)
       setTools((current) => {
@@ -316,12 +346,19 @@ export function ConnectionsPage() {
 
   return (
     <div className="page-stack">
+      <div className="seg" role="tablist" aria-label="연결 운영">
+        <button className={section === 'connections' ? 'active' : ''} onClick={() => setSection('connections')}>MCP 연결</button>
+        <button className={section === 'accounts' ? 'active' : ''} onClick={() => setSection('accounts')}>ChatGPT 계정</button>
+        <button className={section === 'workflows' ? 'active' : ''} onClick={() => setSection('workflows')}>Modal 워크플로</button>
+      </div>
+      {error && <p className="inline-warn">{error}</p>}
+      {notice && <p className="usage-notice"><Play size={13} />{notice}<button onClick={() => setNotice('')} aria-label="알림 닫기">×</button></p>}
+      {section === 'connections' && <>
       <section className="panel">
         <div className="panel-heading">
           <div>
             <span className="section-kicker"><Cable size={12} /> 연결 관리</span>
             <h2>MCP 서버와 계정 연결</h2>
-            <p>로컬 stdio 서버는 실행 파일과 인수 배열로 등록합니다. 비밀값은 저장하지 않고 환경변수 이름만 남깁니다.</p>
           </div>
           <button className="secondary-action small" onClick={() => void refresh()}>
             <RefreshCw size={13} />
@@ -362,20 +399,12 @@ export function ConnectionsPage() {
             </label>
           )}
           <div className="conn-form-actions">
-            <button className="primary-action small" onClick={() => void create()}>
+            <button className="primary-action small" disabled={!isTauri} title={isTauri ? undefined : browserCapability('callExternalService').nextAction} onClick={() => void create()}>
               <Plus size={13} />
               연결 추가
             </button>
-            <span className="target-note">
-              {kind === 'mcp-stdio' || kind === 'mcp-http'
-                ? '연결 테스트는 서버를 실행해 도구 목록만 읽습니다. 유료 생성은 실행하지 않습니다.'
-                : '이 종류는 설정만 저장하고 자동 점검은 아직 없습니다.'}
-            </span>
           </div>
         </div>
-
-        {error && <p className="inline-warn">{error}</p>}
-        {notice && <p className="usage-notice"><Play size={13} />{notice}<button onClick={() => setNotice('')} aria-label="알림 닫기">×</button></p>}
 
         <div className="table-scroll">
           <table className="dense-table">
@@ -412,10 +441,9 @@ export function ConnectionsPage() {
                     <td className="num">{connection.toolCount}</td>
                     <td>{connection.lastCheckedAt ? connection.lastCheckedAt.slice(5, 16).replace('T', ' ') : '-'}</td>
                     <td className="actions">
-                      <button className="row-action" disabled={busy === connection.id} onClick={() => void runTest(connection)}>연결 테스트</button>
-                      <button className="row-action" disabled={busy === connection.id || connection.toolCount === 0} onClick={() => void openTools(connection)}>도구 보기</button>
-                      <button className="row-action" onClick={() => void toggleEnabled(connection)}>{connection.enabled ? '사용 중지' : '사용'}</button>
-                      <button className="row-action danger" onClick={() => void remove(connection)}>삭제</button>
+                      <button className="row-action" disabled={busy === connection.id} onClick={() => connection.status === 'tools-ready' ? void verifyTool(connection) : connection.status === 'verified' ? void openTools(connection) : void runTest(connection)}>{connection.status === 'tools-ready' ? '실제 호출 검증' : connection.status === 'verified' ? '도구 확인' : '다음: 연결 테스트'}</button>
+                      <button className="row-action" onClick={() => void toggleEnabled(connection)}>{connection.enabled ? '먼저 사용 중지' : '다시 사용'}</button>
+                      {!connection.enabled && <button className="row-action danger" onClick={() => void remove(connection)}>사용 중지 후 삭제</button>}
                     </td>
                   </tr>
                   {(tools[connection.id] ?? []).length > 0 && (
@@ -441,26 +469,17 @@ export function ConnectionsPage() {
           </table>
         </div>
 
-        <p className="usage-note">
-          <Cable size={13} />
-          <span>
-            도구 목록만 확인한 연결은 `도구 확인됨`으로 표시되고, 실제 도구 호출이 성공하면 `실행 검증됨`으로 바뀝니다.
-            상태를 한 단계로 뭉뚱그리지 않습니다.
-          </span>
-        </p>
       </section>
+      </>}
 
+      {section === 'accounts' &&
       <section className="panel">
         <div className="panel-heading">
           <div>
             <span className="section-kicker"><Cable size={12} /> ChatGPT 계정</span>
             <h2>구독 계정 연결</h2>
-            <p>
-              브라우저에서 로그인하면 앱이 콜백을 받아 토큰을 운영체제 저장소(DPAPI)에 보관합니다.
-              토큰은 화면으로 전달되지 않고, 요청 직전에 만료를 확인해 계정당 한 번만 갱신합니다.
-            </p>
           </div>
-          <button className="primary-action small" disabled={Boolean(attempt)} onClick={() => void startLogin()}>
+          <button className="primary-action small" disabled={!isTauri || Boolean(attempt)} title={isTauri ? undefined : browserCapability('callExternalService').nextAction} onClick={() => void startLogin()}>
             <Play size={13} />
             ChatGPT로 로그인
           </button>
@@ -519,16 +538,14 @@ export function ConnectionsPage() {
           </table>
         </div>
       </section>
+      }
 
+      {section === 'workflows' && <>
       <section className="panel">
         <div className="panel-heading">
           <div>
             <span className="section-kicker"><Boxes size={12} /> 워크플로</span>
             <h2>등록된 생성 워크플로</h2>
-            <p>
-              Modal에 배포한 워크플로를 캔버스의 Comfy 워크플로 노드에서 선택합니다.
-              입출력 형식이 다른 워크플로를 함께 등록해 같은 캔버스에서 쓸 수 있습니다.
-            </p>
           </div>
           <button className="secondary-action small" onClick={() => void refreshWorkflows()}>
             <RefreshCw size={13} />
@@ -554,11 +571,10 @@ export function ConnectionsPage() {
             <input value={workflowNotes} onChange={(event) => setWorkflowNotes(event.target.value)} placeholder="입출력·모델·검증 범위" />
           </label>
           <div className="conn-form-actions">
-            <button className="primary-action small" onClick={() => void createWorkflow()}>
+            <button className="primary-action small" disabled={!isTauri} title={isTauri ? undefined : browserCapability('callExternalService').nextAction} onClick={() => void createWorkflow()}>
               <Plus size={13} />
               워크플로 등록
             </button>
-            <span className="target-note">등록과 실행 검증은 다릅니다. 실제 실행이 확인된 워크플로만 `실행 검증됨`으로 표시됩니다.</span>
           </div>
         </div>
 
@@ -598,13 +614,13 @@ export function ConnectionsPage() {
           </table>
         </div>
       </section>
+      </>}
 
       <section className="panel">
         <div className="panel-heading">
           <div>
             <span className="section-kicker"><Trash2 size={12} /> 정리</span>
             <h2>등록된 연결 정리</h2>
-            <p>연결을 삭제하면 저장된 설정과 도구 목록이 함께 사라집니다. 프로젝트 문서와 실행 기록은 남습니다.</p>
           </div>
         </div>
       </section>

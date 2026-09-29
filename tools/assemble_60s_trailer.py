@@ -6,6 +6,7 @@ import argparse
 import json
 import subprocess
 from pathlib import Path
+from lab_paths import data_path
 
 
 SEGMENT_DURATIONS = [6, 6, 6, 6, 6, 6, 6, 6, 6, 6]
@@ -53,8 +54,8 @@ def build_filter(clip_sequence: list[Path], fontfile: str) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--clips-root", type=Path, default=Path(r"F:\modal-gui\h3-clips"))
-    parser.add_argument("--output", type=Path, default=Path(r"F:\modal-gui\deliverables\pubg-update43-1-60s-draft.mp4"))
+    parser.add_argument("--clips-root", type=Path, default=data_path("h3-clips"))
+    parser.add_argument("--output", type=Path, default=data_path("deliverables", "pubg-update43-1-60s-draft.mp4"))
     parser.add_argument("--audio", type=Path)
     parser.add_argument("--metadata", type=Path)
     args = parser.parse_args()

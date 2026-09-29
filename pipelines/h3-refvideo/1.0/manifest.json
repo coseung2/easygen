@@ -1,0 +1,33 @@
+{
+  "id": "h3-refvideo",
+  "version": "1.0",
+  "status": "candidate",
+  "kind": "video",
+  "engine": "modal-comfyui",
+  "summary": "Blender motion reference video and optional appearance image to H3 video",
+  "inputs": {
+    "reference_video": "required; relative file under /data/input",
+    "image": "optional",
+    "prompt": "required; explicitly use <Video 1>",
+    "seconds": "1-15",
+    "seed": "optional"
+  },
+  "outputs": {
+    "video": "mp4; 24fps; duration rounded up to 17k+5 frames"
+  },
+  "runtime": {
+    "modal_app": "h3-refvideo-v1",
+    "gpu": "L40S",
+    "container_image": "base im-AYSPVNRooQYXy8IgQlPWOJ plus legacy cached node layers",
+    "model_volume": "minimax-h3-models",
+    "model_files": [],
+    "model_hashes_verified": false
+  },
+  "files": {
+    "test_worker.py": "sha256:311788661d4b60aa797497c2ccae006771ebf347c5f4127f92caaf005ad4a5a6",
+    "worker.py": "sha256:5ed530a2429708f2d6cf39188ebc0ce6f180e81ea36bb55806ecf460dfa7d986",
+    "workflow.ui.json": "sha256:a5d171036908e31b7b388473bc300460f98aa5a7783c38d6a608f262d1f54f7d"
+  },
+  "released_at": null,
+  "notes": "Candidate only. Local graph tests do not establish live model motion adherence. No reference audio. Model hashes and real output gate remain pending."
+}
