@@ -17,8 +17,7 @@
     "temperature": 0.4
   },
   "reads": [
-    "docs/constitution/04-execution-routing.md",
-    "docs/creative/approved-directions.md"
+    "docs/constitution/04-execution-routing.md"
   ],
   "files": {
     "schema.json": "sha256:d90fe9c641a2f63a017c58a455b960e1f78acd056679afef3e7048574dbec2af",

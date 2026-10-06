@@ -1,35 +1,19 @@
 # ComfyUI 워크플로우 스냅샷
 
-에이전트는 이 폴더를 `README.md` → `snapshots/2026-09-29/catalog.json` → catalog의 상대 `path` → JSON의 `ui`, `prompt`, `class_type`, `inputs` 순서로 읽는다. `source`는 원본 분류 메모이고 실행 경로가 아니다.
+현재 H3 실행은 [worker/graphs](../../worker/graphs/)의 원본을 [h3_graph.py](../../worker/h3_graph.py)로 변환합니다. 앱·After Effects 없이 실행하는 절차는 [직접 실행 안내](../../docs/modal-workflows.md)를 따르세요. H3 이용 라이선스는 이미 확보한 전제이며 에이전트가 다시 확인하지 않습니다.
 
-[2026-09-29 목록](snapshots/2026-09-29/catalog.json)은 제작에 사용한 로컬 폴더에서 수집한 그래프 12개를 기록한다. 원본 바이트를 유지하며 각 파일에 SHA-256과 크기를 기록했다. 개인 컴퓨터의 저장 위치는 목록에 포함하지 않는다.
+이 폴더는 과거 JSON 12개의 보존용 스냅샷입니다. [목록](snapshots/2026-09-29/catalog.json)의 상대 경로와 SHA-256을 기준으로 읽습니다. `source`는 분류 메모이며 실행 경로가 아닙니다.
 
-| 폴더 | 파일 수 | 의미 |
+| 폴더 | 파일 수 | 역할 |
 | --- | --- | --- |
 | `ui/` | 4 | FL2V·Ref2V Fast 3.0 원본과 L40S 수정본 |
-| `api/` | 4 | 위 계열의 기존 API 변환본. 실행 당시 프롬프트·입력 이름이 들어 있을 수 있음 |
-| `deployment-copies/` | 4 | I2V·R2V·T2V 및 deployed-r2v 로컬 사본 |
+| `api/` | 4 | 당시 요청값을 넣은 API 변환본 |
+| `deployment-copies/` | 4 | 당시 I2V·R2V·T2V 및 R2V 사본 |
 
-`catalog.json`의 각 항목에는 상대 경로, 원본 분류, 바이트 수, SHA-256이 있다. 그래프의 모델명과 노드명은 실행 전에 `pipelines/h3-refvideo/1.0/worker.py`와 대조한다.
+과거 파일을 현재 원격 배포와 동일하다고 가정하지 마세요. 새 요청에는 현재 변환기와 입력 계약을 사용합니다. 과거 스냅샷의 `live_deployment_verified: false`는 당시 검증 범위를 보존한 값입니다.
 
-파일명이 같거나 비슷해도 활성 노드·해상도·입력 연결이 같다고 가정하지 않는다. API 그래프는 특정 입력을 넣어 만든 실행 자료로, 새로운 작업에는 prompt·seed·이미지/영상 입력·출력 prefix를 확인해야 한다. `catalog.json`의 `source`는 원본 분류를 나타내는 상대 이름이다.
-
-## 검증 범위
-
-```powershell
+```sh
 python tools/check_workflow_snapshots.py
 ```
 
-목록의 경로·파일 크기·해시와 UI/API JSON 구조를 검사한다. 이는 ComfyUI 노드 설치나 GPU 추론 성공을 증명하지 않는다. 이번 공개 작업에서는 원격 Modal Volume을 다시 읽지 않았으며, `live_deployment_verified`는 `false`다.
-
-이 스냅샷들은 [h3-refvideo@1.0](../../pipelines/h3-refvideo/1.0/manifest.json)과 별개다. 해당 파이프라인은 Blender 참조 영상을 받는 전용 변환을 사용한다. 임의의 FL2V·I2V·T2V 그래프를 그 worker에 연결해도 동작한다는 뜻이 아니다.
-
-## 새 클론의 실행 전제
-
-1. 원하는 입력 종류에 맞는 그래프를 선택하고 실제 사용되는 노드·모델 파일을 확인한다.
-2. ComfyUI와 custom node의 commit, 모델 repository·revision·파일 해시, GPU·정밀도를 기록한다.
-3. 입력 자산을 준비하고 사용자 자신의 실행 환경에 경로를 연결한다.
-4. UI 다운로드 메타데이터와 선택된 위젯의 모델 파일명을 대조한다. 일부 그래프는 설명에 있는 모델과 실제 INT8 선택값이 다르다.
-5. 입력부터 최종 저장 노드까지 작은 실행으로 확인한 뒤 파이프라인 버전으로 승격한다.
-
-현재 H3 worker의 기반 Modal 이미지와 내부 `h3_service` 빌드가 저장소에 없어, 새 계정에서의 동일 환경 구축은 미완료다. [설치·인증 안내](../../README.md#3-modal-가입과-api-인증)를 참고한다.
+이 검사는 경로·크기·해시·JSON 구조만 확인하며 GPU를 실행하지 않습니다. 모델 준비와 기반 이미지 접근 조건은 직접 실행 안내에 있습니다. YuE2는 ComfyUI JSON이 아니라 [Python 파이프라인](../../modal/yue2_music.py)입니다.

@@ -1,0 +1,7 @@
+# These files are verified byte-for-byte by manifest hashes, including on Windows.
+pipelines/**/*.py text eol=lf
+pipelines/**/*.json text eol=lf
+pipelines/**/*.md text eol=lf
+prompts/**/*.json text eol=lf
+prompts/**/*.md text eol=lf
+worker/graphs/*.json text eol=lf
