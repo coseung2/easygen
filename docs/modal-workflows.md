@@ -2,7 +2,7 @@
 
 이 문서는 에이전트가 저장소를 받은 뒤 실제 코드를 선택하고 실행·복구·다운로드하기 위한 안내다. **앱과 After Effects는 필수가 아니다.** Node.js·Rust·Tauri, 로컬 ComfyUI·GPU, 별도 제작·레퍼런스 관리 프로젝트도 필요 없다.
 
-**H3 이용자는 라이선스를 이미 확보했다.** 에이전트는 취득 여부나 증빙을 다시 묻지 않는다. 호출기는 기존 런타임의 attestation 문자열을 자동 전달한다. 리소스 접근 실패를 라이선스 질문으로 바꾸지 않는다.
+**H3 이용자는 라이선스를 이미 확보했다.** 에이전트는 취득 여부나 증빙을 다시 묻지 않는다. 독립 런타임은 비공개 라이선스 패키지나 재확인 단계를 사용하지 않는다. 리소스 접근 실패를 라이선스 질문으로 바꾸지 않는다.
 
 ## 1. 로컬 준비와 인증
 
@@ -24,114 +24,73 @@ python -m modal volume list
 
 ## 2. 새 워크스페이스 준비
 
-### 준비 여부를 먼저 분류
+현재 앱은 유지보수자 개인용이다. 외부 사용자는 앱 계정이나 서버에 연결하지 않고 자신의 Modal 계정에 독립 워크플로우를 만든다. `modal/workflow_h3.py`, `workflow_image.py`, `workflow_music.py`가 공개 배포 경로다. 개인 앱의 `easygen_h3.py`, `easygen_image.py`, `yue2_music.py`, `easygen_team.py`는 배포하지 않는다.
 
-| 대상 | 배포 코드 | 준비 조건 |
-| --- | --- | --- |
-| H3 | `modal/easygen_h3.py` | 접근 가능한 기반 이미지, ComfyUI·custom nodes, H3 모델 7개, 데이터·모델 볼륨 |
-| Krea·Ideogram | `modal/easygen_image.py` | 접근 가능한 기반 이미지, ComfyUI, 이미지 모델 7개, 모델 볼륨 |
-| YuE2 | `modal/yue2_music.py` | 파일 내 이미지 빌드, YuE2 모델 접근, 캐시·출력 볼륨 |
+### 이름과 계정 선택
 
-H3와 이미지는 `modal.Image.from_id("im-AYSPVNRooQYXy8IgQlPWOJ")`를 사용한다. **이 ID는 다른 워크스페이스에서 접근 가능하다고 보장하지 않는다.** 기반 이미지 전체 빌드 정의와 H3의 `/root/h3_service` 패키지는 이 저장소에 포함돼 있지 않다. 배포 코드가 덧붙이는 custom node 설치 명령만으로 기반 이미지가 완전히 재현되지는 않는다.
+기본 이름은 `my-workflow-h3`, `my-workflow-image`, `my-workflow-music`이다. 필요하면 준비 전에 이름을 정한다:
 
-따라서 새 계정에서 준비되지 않았다면:
-1. 사용 가능한 동등 이미지·사전 구축 배포가 있는지 확인한다.
-2. 없으면 기반 이미지 빌드 정의·패키지 또는 접근 가능한 대체 배포가 필요하다는 사실과 빠진 항목을 보고한다.
-3. H3 라이선스를 다시 묻거나, 앱·After Effects 설치로 해결하려 하지 않는다.
-4. 임의의 이미지·모델로 바꾸고 기존 워크플로우와 같다고 보고하지 않는다. 현재 공개 코드만으로 새 H3 계정의 완전한 부트스트랩이 완료됐다고 주장하지 않는다.
+```powershell
+$env:EASYGEN_WORKFLOW_PREFIX = 'my-studio'
+```
 
-H3·이미지의 ComfyUI 추가 단계는 v0.37.0 / `73c9bad4d21e7addbe1d13bc92eee0f1431b017d`를 확인한다. 일부 custom node는 고정 commit 없이 clone하므로 모든 의존성이 완전히 고정된 구성은 아니다.
+macOS/Linux: `export EASYGEN_WORKFLOW_PREFIX=my-studio`. 1–40자의 영문 소문자·숫자·하이픈을 사용하고 영문으로 시작한다. 모델 준비·배포·요청 prepare 동안 같은 값을 유지한다. 다른 계정의 같은 이름은 다른 리소스다. 기존 워크플로우를 보존하려면 새 prefix를 사용한다. `state.json`에는 prepare 당시 배포·볼륨 이름이 저장된다.
 
-### 볼륨과 모델
-
-`python -m modal volume list`에서 없는 볼륨만 만든다. 아래는 각 대상에 필요한 이름이다.
+### 에이전트가 수행할 명령
 
 ```sh
-# H3만 사용할 때
-python -m modal volume create minimax-h3-models
-python -m modal volume create minimax-h3-comfyui-data
-# 이미지만 사용할 때
-python -m modal volume create local-image-gen-models-v1
-# 음악만 사용할 때
-python -m modal volume create yue2-models
-python -m modal volume create yue2-outputs
+python tools/setup_modal.py h3
+python tools/setup_modal.py h3 --apply
 ```
 
-빈 볼륨 생성은 모델 준비 완료가 아니다. 기존 볼륨을 지우거나 덮어쓰지 않는다.
+`--apply` 없는 명령은 로컬 계획만 출력한다. `--apply`는 현재 인증된 워크스페이스에서 다음을 순서대로 수행하며 오류 시 멈춘다:
 
-H3의 `minimax-h3-models`에 필요한 상대 경로:
+1. Modal 접근 확인.
+2. H3·이미지: 공개 이미지 빌드 및 CPU ComfyUI 노드 등록 검사. 모델·GPU 없이 검사한다.
+3. CPU 다운로드 작업: 자신의 모델 볼륨 생성, 고정 revision의 모델 다운로드, 크기·SHA-256 검증. YuE2도 생성 전에 내려받는다.
+4. 해당 독립 워크플로우 배포. GPU 생성은 실행하지 않는다.
 
-```text
-diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors
-diffusion_models/minimax_h3_ref2va_pruned_int8_convrot.safetensors
-text_encoders/qwen3vl_32b_minimax_h3_int8_convrot.safetensors
-vae/minimax_h3_video_vae_int8_convrot.safetensors
-vae/minimax_h3_audio_vae_fp32.safetensors
-latent_upscale_models/minimax_h3_latent_upscaler_3d_conv_v1_fp32.pth
-loras/lightx2v_hybrid-4to8step-full-fusion_Turbo_pruned.safetensors
-```
+이미지는 `image`, 음악은 `music`을 지정한다. 한 종류만 필요하면 그 종류만 준비한다. CPU 작업이 각 대상의 빈 모델 볼륨을 만들어도 다른 종류의 모델을 다운로드하지는 않는다. CPU 실행·스토리지 비용은 생길 수 있다.
 
-볼륨의 LoRA 경로에는 `H3/`가 없으며, 런타임이 ComfyUI의 `models/loras/H3/`로 연결한다. 정확한 연결은 `modal/easygen_h3.py:MODEL_LINKS`가 기준이다. 모델은 저장소에 포함돼 있지 않다.
+| 종류 | 모델 파일 | 다운로드 합계 | 기본 볼륨 |
+| --- | --- | --- | --- |
+| H3 | 7개 | 약 72.96 GiB | `my-workflow-h3-models` |
+| 이미지 | 7개 | 약 44.82 GiB | `my-workflow-image-models` |
+| 음악 | 19개 | 약 7.26 GiB | `my-workflow-music-models` |
 
-H3 JSON의 설명에는 다음 출처가 기록돼 있다. 이는 출처 안내이며 다운로드 availability·revision·해시 검증 완료를 뜻하지 않는다. 에이전트는 실제 요청 파일명을 사용하고 다운로드 기록에 revision·SHA-256을 남긴다. H3 라이선스 확인 질문을 추가하지 않는다.
+실제 파일별 repository·revision·원격 파일명·볼륨 상대 경로·크기·해시는 `easygen_runtime/models.json`이 기준이다. H3에는 FL2VA·Ref2VA, text encoder, 두 VAE, LoRA, upscaler가 포함된다. 이미지 런타임은 Krea·Ideogram 두 모델 세트 모두 필요하다. 데이터 볼륨은 H3 입력·결과용 `my-workflow-h3-data`, 음악 결과용 `my-workflow-music-outputs`다.
 
-| 파일 | JSON에 기록된 출처 |
-| --- | --- |
-| FL2VA·Ref2VA, Qwen3VL text encoder, audio VAE | `Comfy-Org/MiniMax-H3`의 해당 모델 하위 폴더 |
-| INT8 video VAE | `Kijai/MiniMax-H3-experimental`의 같은 파일명 |
-| Turbo LoRA | `TenStrip/MinimaxH3-Turbo_Shenanigans`의 같은 파일명 |
-| Latent upscaler | `LBH-123-AI/Minimax_h3_latent_Upscaler`의 `minimax_h3_latent_upscaler_3d_conv_v1/` |
+`easygen_runtime/sources.json`은 ComfyUI v0.37.0 및 custom node Git commit을 고정한다. 공개 CUDA 이미지와 Python 3.12, PyTorch 2.10.0으로 직접 빌드한다. 운영자의 `im-*` ID와 비공개 `h3_service`가 필요 없다. 전체 전이 pip 의존성·OS 패키지까지 완전히 고정된 lockfile은 아니므로 빌드 검사 결과도 확인한다.
 
-권한 있는 로컬 파일을 준비한 뒤 개별 파일을 올리는 예:
+### 다운로드 인증과 재개
+
+공개 파일은 토큰 없이 다운로드한다. 게이트·비공개 접근 때문에 HF 토큰이 필요한 경우 사용자 자신의 권한 있는 토큰을 `HF_TOKEN` 키가 있는 Modal Secret으로 준비한다. `EASYGEN_HF_SECRET`에 그 **Secret 이름**을 지정하면 CPU 다운로드 함수에만 전달한다. 토큰 값을 명령 인자·로그·Git에 적지 않는다. 이것은 접근 인증이며 H3 라이선스 재확인 절차가 아니다.
+
+H3 모델 라이선스는 확보된 전제다. 다른 모델의 이용 조건은 각각 적용되며 유지보수자의 추가 권한이 자동 양도되는 것은 아니다.
+
+끊긴 다운로드는 완료 파일과 `.download-cache`를 같은 볼륨에 보존한다. 이전 준비 작업이 종료됐는지 확인한 뒤 동일 명령을 명시적으로 재실행하면 정상 파일은 검증 후 건너뛴다. 같은 볼륨에 다운로드 작업을 중복 실행하지 않는다. 기존 파일의 해시가 다르면 덮어쓰지 않고 오류를 낸다. 이를 무시하거나 파일을 자동 삭제하지 않는다.
 
 ```sh
-python -m modal volume put minimax-h3-models /absolute/path/to/model.safetensors /diffusion_models/model.safetensors
-python -m modal volume ls minimax-h3-models /diffusion_models
+python -m modal run modal/bootstrap.py --target h3 --verify-only
 ```
 
-위 파일명은 형식 예시다. 실제 업로드에는 앞의 정확한 모델 파일명을 사용한다. `--force`로 기존 가중치를 임의 덮어쓰지 않는다. 입력·결과는 `minimax-h3-comfyui-data`의 `input/`, `output/` 아래에 저장된다.
+`--verify-only`는 이미 있는 모델의 크기·해시만 검사한다. CPU 실행·볼륨 읽기 비용은 있을 수 있다. 모델을 Git이나 컨테이너 이미지에 넣지 않는다.
 
-이미지의 `local-image-gen-models-v1` 파일은 다음과 같다. 런타임은 모델 하나만 호출해도 아래 전체 목록을 검사한다.
+## 3. 개별 준비·배포·검증
 
-```text
-diffusion_models/krea2_turbo_fp8_scaled.safetensors
-text_encoders/qwen3vl_4b_fp8_scaled.safetensors
-vae/qwen_image_vae.safetensors
-diffusion_models/ideogram4_fp8_scaled.safetensors
-diffusion_models/ideogram4_unconditional_fp8_scaled.safetensors
-text_encoders/qwen3vl_8b_fp8_scaled.safetensors
-split_files/vae/flux2-vae.safetensors
-```
-
-`modal/local_image_gen.py:MODEL_FILES`에 Hugging Face repository·파일 경로가 있다. `download_models`는 다운로드 전용 함수지만 파일의 기본 진입점은 평가 생성을 수행한다. 다운로드 목적으로 `modal run modal/local_image_gen.py`를 통째로 실행하지 않는다. 사용하려면 해당 함수만 명시한다:
+일괄 도구 대신 필요한 단계만 실행할 수도 있다:
 
 ```sh
-python -m modal run modal/local_image_gen.py::download_models
+python -m modal run modal/check_environment.py
+python -m modal run modal/bootstrap.py --target h3
+python -m modal deploy modal/workflow_h3.py
+python -m modal app info my-workflow-h3 --json
+python -m modal app history my-workflow-h3 --json
 ```
 
-CPU 다운로드·저장 비용도 생길 수 있으며, 이 명령이 H3 기반 이미지 접근 문제를 해결하지는 않는다.
+이미지 배포는 `modal/workflow_image.py`, 음악은 `modal/workflow_music.py`를 사용한다. 별도 이미지 ID 입력·앱 설치·After Effects 설치는 필요 없다. 배포는 같은 이름의 기존 워크플로우를 갱신하므로 진행 중 작업을 먼저 확인한다.
 
-YuE2는 `m-a-p/YuE2-3B`, `m-a-p/YuE2-Vae`를 사용한다. 첫 생성에서 `/models/huggingface`에 모델을 캐시하므로 첫 호출에 다운로드·기동 시간이 포함된다. H3 라이선스 전제는 다른 모델의 이용 조건을 바꾸지 않는다. YuE2 코드의 메타데이터에 적힌 추가 제작자 허가는 외부 이용자에게 자동 양도되는 권한이 아니다.
-
-## 3. 필요한 배포만 생성 또는 갱신
-
-준비 조건을 충족한 대상만 배포한다. 생성 중인 기존 앱을 무턱대고 재배포하지 않는다.
-
-```sh
-python -m modal app list --json
-python -m modal deploy modal/easygen_h3.py
-python -m modal deploy modal/easygen_image.py
-python -m modal deploy modal/yue2_music.py
-```
-
-세 명령을 모두 실행할 필요는 없다. 원하는 종류의 명령만 고른다. 앱 화면·협업 서버는 배포하지 않는다. 배포 후 메타데이터와 이력을 확인한다.
-
-```sh
-python -m modal app info easygen-h3-v1 --json
-python -m modal app history easygen-h3-v1 --json
-```
-
-배포 성공은 GPU 생성 성공을 뜻하지 않는다. H3의 `health`·`validate_graph`는 GPU 컨테이너를 시작하므로 무료 사전 검사로 무조건 호출하지 않는다. `run_graph` 자체가 생성 전에 그래프 검사를 수행한다. [Modal 배포 관리](https://modal.com/docs/cli/latest/app)
+CPU 노드 등록·파일 해시·배포 성공은 실제 GPU 추론 성공과 별개다. 마지막으로 승인된 최소 생성 1건을 4절대로 실행하고 결과를 디코드해 확인한다. GPU 검증을 하지 않았으면 하지 않았다고 보고한다. H3 `health`·`validate_graph`도 GPU 컨테이너를 시작할 수 있으므로 무료 검사로 무조건 호출하지 않는다.
 
 ## 4. 앱 없이 직접 실행
 
@@ -263,7 +222,7 @@ python tools/modal_workflow.py cancel ../video-run
 | 두 에이전트가 같은 폴더 제출 | 하나만 `submit.lock`을 생성할 수 있음. 다른 쪽은 재제출하지 않음 |
 | 호출 ID를 이력에서 확인함 | 작업을 대조한 뒤 `state.json`에 `call_id`와 `status: submitted`를 복구하고 조회 |
 | app/function not found | 계정·환경·배포 이름 확인. 타인의 계정으로 바꾸지 않음 |
-| image not found / 권한 오류 | 기반 이미지 접근·빌드 자산 부족. H3 라이선스 재질문이나 앱 설치로 대체하지 않음 |
+| image not found / 권한 오류 | 공개 registry·소스 네트워크 접근과 빌드 로그 확인. 개인 앱용 배포 파일을 잘못 선택했는지 확인 |
 | 모델 파일·노드 누락 | 모델 경로와 기반 이미지·custom node 구성 확인 |
 | 원격 FunctionTimeoutError | 종료된 실행 제한 오류. 일반 대기 timeout과 구분 |
 | `get`에서 다른 오류 | 실패 또는 전송 오류일 수 있음. 메시지·원격 이력 확인 후 판단. 자동 재제출하지 않음 |
@@ -279,4 +238,4 @@ python -m unittest tools.test_modal_workflow
 python tools/check_workflow_snapshots.py
 ```
 
-호출기 로컬 테스트와 H3 그래프 연결·메타데이터 정리는 GPU를 사용하지 않는다. 이 안내 작성 과정에서 새 계정의 전체 이미지 재구축이나 새 유료 생성을 수행한 것은 아니다. GPU 모델 파일은 Git에 포함하지 않으며 기반 이미지 의존성의 공개 재현 제한은 2절을 따른다.
+호출기 로컬 테스트와 H3 그래프 연결·메타데이터 정리는 GPU를 사용하지 않는다. 공개 소스만으로 새 컨테이너를 빌드하고 CPU에서 H3·이미지 필수 노드 14개 등록을 실제 확인했다. 새 계정 전체 모델 다운로드와 GPU 추론 검증은 이번 작업에서 수행하지 않았다. GPU 모델 파일은 Git에 포함하지 않으며 각자 자신의 볼륨에 준비한다. 새 계정의 GPU 추론 성공은 실제 생성으로 별도 검증한다.

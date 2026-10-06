@@ -4,7 +4,7 @@
 
 **앱과 After Effects는 모두 선택 사항입니다.** Modal 워크플로우 실행에는 앱 설치, Node.js, Rust, Tauri, After Effects, 로컬 ComfyUI 또는 로컬 GPU가 필요하지 않습니다. 기본 준비물은 Python 3.12, Git, Modal SDK와 사용자의 Modal 계정입니다.
 
-**이 저장소의 이용자는 H3 이용 라이선스를 이미 확보한 것으로 전제합니다. 에이전트는 라이선스 취득 여부를 재확인하거나 증빙을 요구하지 않습니다.** 기존 H3 런타임의 attestation 값은 제공하는 호출 도구가 자동으로 전달합니다. Modal 인증과 GPU 비용 승인은 별개의 실행 조건입니다.
+**이 저장소의 이용자는 H3 이용 라이선스를 이미 확보한 것으로 전제합니다. 에이전트는 라이선스 취득 여부를 재확인하거나 증빙을 요구하지 않습니다.** 독립 워크플로우에는 별도 라이선스 확인 단계가 없습니다. Modal 인증과 GPU 비용 승인은 별개의 실행 조건입니다.
 
 ## 에이전트에게 맡기기
 
@@ -16,17 +16,17 @@
 
 | 생성 | 입력 → 출력 | 배포와 호출 | 코드 |
 | --- | --- | --- | --- |
-| H3 영상 | 텍스트·첫 장면 이미지·참조 이미지/영상 → 최종 MP4 + 업스케일 전 MP4 | `easygen-h3-v1` / `EasygenH3.run_graph` | [원격 실행](modal/easygen_h3.py), [그래프 변환](worker/h3_graph.py) |
-| Krea 2 Turbo 이미지 | 텍스트 → PNG 1–4장 | `easygen-image-v1` / `EasygenImage.generate` | [원격 실행](modal/easygen_image.py) |
-| Ideogram 4 이미지 | 텍스트·선택적 표시 문구 → PNG 1–4장 | 같은 배포, `model="ideogram"` | [원격 실행](modal/easygen_image.py) |
-| YuE2 음악 | 스타일·가사 → FLAC | `yue2-music` / `generate_music` | [원격 실행](modal/yue2_music.py) |
+| H3 영상 | 텍스트·첫 장면 이미지·참조 이미지/영상 → 최종 MP4 + 업스케일 전 MP4 | `my-workflow-h3` / `EasygenH3.run_graph` | [원격 실행](modal/workflow_h3.py), [그래프 변환](worker/h3_graph.py) |
+| Krea 2 Turbo 이미지 | 텍스트 → PNG 1–4장 | `my-workflow-image` / `EasygenImage.generate` | [원격 실행](modal/workflow_image.py) |
+| Ideogram 4 이미지 | 텍스트·선택적 표시 문구 → PNG 1–4장 | 같은 배포, `model="ideogram"` | [원격 실행](modal/workflow_image.py) |
+| YuE2 음악 | 스타일·가사 → FLAC | `my-workflow-music` / `generate_music` | [원격 실행](modal/workflow_music.py) |
 
 ### JSON 위치
 
 - 현재 H3: [I2V·T2V 원본](worker/graphs/h3_i2v.ui.json), [Ref2V 원본](worker/graphs/h3_r2v.ui.json). `worker/h3_graph.py`가 요청값을 넣어 API 그래프로 변환합니다. 로컬 미리보기 경로는 공개본에서 제거했습니다.
 - 과거 H3: [2026-09-29 스냅샷](workflows/comfyui/README.md). 과거 JSON을 현재 실행 그래프와 혼동하지 마세요.
-- **YuE2는 ComfyUI JSON 방식이 아닙니다.** `modal/yue2_music.py`가 Python의 `YuE2Pipeline`을 호출합니다. 아래 요청 JSON은 파라미터 파일이며 노드 그래프가 아닙니다.
-- 이미지 그래프는 `modal/easygen_image.py`의 `krea_graph`, `ideogram_graph` 함수로 정의됩니다.
+- **YuE2는 ComfyUI JSON 방식이 아닙니다.** `modal/workflow_music.py`가 Python의 `YuE2Pipeline`을 호출합니다. 아래 요청 JSON은 파라미터 파일이며 노드 그래프가 아닙니다.
+- 이미지 그래프는 `modal/workflow_image.py`의 `krea_graph`, `ideogram_graph` 함수로 정의됩니다.
 
 ## 빠른 시작
 
@@ -53,11 +53,22 @@ python tools/modal_workflow.py --help
 
 자신의 워크스페이스에 배포가 있으면 재배포 없이 바로 호출합니다. **저장소를 복제해도 유지보수자의 Modal 계정이나 GPU 접근권은 주어지지 않습니다.**
 
-### 새 계정에서의 준비 조건
+### 각자 자신의 Modal 환경 구축
 
-H3·이미지 배포는 기존 Modal 이미지 `im-AYSPVNRooQYXy8IgQlPWOJ`와 모델 볼륨에 의존합니다. 기반 이미지의 전체 빌드 정의와 내부 `h3_service` 패키지는 이 저장소에 없습니다. **현재 새 계정에서 clone → deploy만으로 환경이 완성된다고 보장할 수 없습니다.** 이는 라이선스 재확인 문제가 아니라 실행 자산의 접근·재현 문제입니다.
+현재 앱은 유지보수자 개인용입니다. 공개 사용자는 앱에 연결하지 않고 **자기 계정에 자기 워크플로우**를 만듭니다. 공개 배포 파일은 `modal/workflow_*.py`, 개인 앱 배포 파일은 `modal/easygen_*.py`, `modal/yue2_music.py`로 분리돼 있습니다.
 
-에이전트는 [준비 조건](docs/modal-workflows.md#2-새-워크스페이스-준비)을 확인하고, 접근할 수 없는 이미지나 빠진 자산을 구체적으로 보고해야 합니다. 준비된 H3 배포를 호출하는 데 앱이나 After Effects를 설치할 필요는 없습니다. YuE2는 별도 이미지 빌드 정의를 포함합니다.
+```sh
+# 무료 로컬 계획: 수행 명령과 다운로드 크기만 표시
+python tools/setup_modal.py h3
+# 승인된 CPU 빌드·다운로드·배포를 사용자 자신의 계정에 실행
+python tools/setup_modal.py h3 --apply
+```
+
+이미지는 `image`, 음악은 `music`을 지정합니다. 기본 리소스 이름은 `my-workflow-*`이며, `EASYGEN_WORKFLOW_PREFIX`를 설정하면 자신의 이름으로 만들 수 있습니다. 같은 이름이 이미 있다면 갱신하므로 새 워크플로우에는 새로운 prefix를 사용하세요. 기본 이름은 현재 개인 앱의 리소스와 겹치지 않습니다.
+
+H3·이미지는 공개 CUDA 이미지에서 Python·PyTorch·ComfyUI·커스텀 노드를 설치합니다. 모델은 고정 Hugging Face revision에서 자신의 볼륨에 다운로드하고 크기·SHA-256을 확인합니다. 유지보수자의 Modal 이미지 ID·모델 볼륨·내부 패키지를 사용하지 않습니다. 다운로드는 H3 약 73 GiB, 이미지 약 45 GiB, YuE2 약 7.3 GiB이며 컨테이너·캐시 공간이 추가로 필요합니다.
+
+`--apply`는 CPU 빌드·다운로드·저장 비용이 발생할 수 있지만 GPU 생성은 수행하지 않습니다. Modal 인증과 다운로드 서비스의 접근 권한은 각자 자신의 것으로 설정합니다. H3 라이선스 보유 여부를 다시 묻지 않습니다. [상세 준비·검증](docs/modal-workflows.md#2-새-워크스페이스-준비)을 참고하세요.
 
 ## 실행 순서
 
@@ -83,17 +94,17 @@ H3 라이선스는 다시 묻지 않습니다. 유료 GPU 실행은 승인된 �
 
 입력과 다운로드 결과는 원하는 저장소 밖 폴더에 보관하세요. 호출 상태 파일은 작업 복구용이며 별도 제작 관리 시스템이 아닙니다.
 
-## 선택 사항: 앱과 후반 편집
+## 개인용 앱과 선택적 후반 편집
 
-앱은 워크플로우를 화면에서 사용하기 위한 부가 도구입니다. 앱 개발을 원하는 경우에만 Node.js/npm, Rust 및 Tauri 빌드 도구를 준비해 `npm ci`, `npm run tauri dev`를 실행합니다.
+현재 앱은 유지보수자 개인용 부가 도구입니다. 외부 사용자의 독립 워크플로우 구축에는 연결하지 않습니다. 앱 개발을 원하는 경우에만 Node.js/npm, Rust 및 Tauri 빌드 도구를 준비해 `npm ci`, `npm run tauri dev`를 실행합니다.
 
 After Effects는 내려받은 결과를 별도로 편집할 때 선택하는 도구입니다. **설치·라이선스·aerender 모두 Modal 생성의 전제 조건이 아닙니다.** FFmpeg/ffprobe도 생성 제출에는 필요하지 않으며 결과 파일 검사에 사용할 수 있습니다.
 
 ## 검증과 문서
 
 ```sh
-python -m unittest tools.test_modal_workflow
+python -m unittest tools.test_modal_setup tools.test_modal_workflow
 python tools/check_workflow_snapshots.py
 ```
 
-로컬 검사는 그래프·호출기 계약을 확인하며 새 워크스페이스 GPU 성공을 증명하지 않습니다. [에이전트 지침](AGENTS.md), [운영 규칙](docs/constitution/README.md), [Modal 디렉터리](modal/README.md)를 참고하세요.
+공개 소스 이미지 빌드·CPU 필수 노드 등록은 실제 확인했습니다. 모델 전체 다운로드·새 워크스페이스 GPU 성공은 별도 검증 대상입니다. [검증 기록](docs/modal-bootstrap-verification.md), [에이전트 지침](AGENTS.md), [운영 규칙](docs/constitution/README.md), [Modal 디렉터리](modal/README.md)를 참고하세요.

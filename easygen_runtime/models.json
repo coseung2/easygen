@@ -1,0 +1,272 @@
+{
+  "h3": [
+    {
+      "repo": "Comfy-Org/MiniMax-H3",
+      "revision": "e5eb578a89295337b8ff433a035929ce0279e0b6",
+      "file": "diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors",
+      "target": "diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors",
+      "bytes": 20970379616,
+      "sha256": "e889202c41dafb67b10d67b97f0d8541508036a6090af23425a5c2615d03c47a"
+    },
+    {
+      "repo": "Comfy-Org/MiniMax-H3",
+      "revision": "e5eb578a89295337b8ff433a035929ce0279e0b6",
+      "file": "diffusion_models/minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+      "target": "diffusion_models/minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+      "bytes": 20970379616,
+      "sha256": "9255f52b6677845ad238f20dfaafa94727053694127ab7f255c048f0f9365779"
+    },
+    {
+      "repo": "Comfy-Org/MiniMax-H3",
+      "revision": "e5eb578a89295337b8ff433a035929ce0279e0b6",
+      "file": "text_encoders/qwen3vl_32b_minimax_h3_int8_convrot.safetensors",
+      "target": "text_encoders/qwen3vl_32b_minimax_h3_int8_convrot.safetensors",
+      "bytes": 27141342152,
+      "sha256": "bc2ced0fbea64757fa9acddccfc0b3f4819d1dcf1da6c124d690d368be283923"
+    },
+    {
+      "repo": "Comfy-Org/MiniMax-H3",
+      "revision": "e5eb578a89295337b8ff433a035929ce0279e0b6",
+      "file": "vae/minimax_h3_video_vae_int8_convrot.safetensors",
+      "target": "vae/minimax_h3_video_vae_int8_convrot.safetensors",
+      "bytes": 2811065184,
+      "sha256": "52a2c8c73583c86e4f41cdcce3a6ad0ea562987bc0bf3d60a0cef5f5c8e60c0e"
+    },
+    {
+      "repo": "Comfy-Org/MiniMax-H3",
+      "revision": "e5eb578a89295337b8ff433a035929ce0279e0b6",
+      "file": "vae/minimax_h3_audio_vae_fp32.safetensors",
+      "target": "vae/minimax_h3_audio_vae_fp32.safetensors",
+      "bytes": 605254808,
+      "sha256": "8e505d95dd1561d47abd43d4238fd40d9bb1ae9e147ed0a4cba778d76ae4db48"
+    },
+    {
+      "repo": "TenStrip/MinimaxH3-Turbo_Shenanigans",
+      "revision": "7b0cb70261a47dfb7b660999a0545163f20a8d14",
+      "file": "lightx2v_hybrid-4to8step-full-fusion_Turbo_pruned.safetensors",
+      "target": "loras/lightx2v_hybrid-4to8step-full-fusion_Turbo_pruned.safetensors",
+      "bytes": 4459853932,
+      "sha256": "0b1eca4dd148a75383de1c8cf32503a3de2b16a462e27fdf82d49a76b9d98bbf"
+    },
+    {
+      "repo": "LBH-123-AI/Minimax_h3_latent_Upscaler",
+      "revision": "3f941d5d182014dd5c0a5e16330420ee2d4aa0c6",
+      "file": "minimax_h3_latent_upscaler_3d_conv_v1/minimax_h3_latent_upscaler_3d_conv_v1_fp32.pth",
+      "target": "latent_upscale_models/minimax_h3_latent_upscaler_3d_conv_v1_fp32.pth",
+      "bytes": 1381251539,
+      "sha256": "d54716fe021a0b653ef07943e3ea4f704a26f3f60a23f905cf45dc87de149f68"
+    }
+  ],
+  "image": [
+    {
+      "repo": "Comfy-Org/Krea-2",
+      "revision": "eb1eddd3983a54678545a9b2c178c5853b30f7be",
+      "file": "diffusion_models/krea2_turbo_fp8_scaled.safetensors",
+      "target": "diffusion_models/krea2_turbo_fp8_scaled.safetensors",
+      "bytes": 13141730784,
+      "sha256": "eb4dd8c612cfd10f64f25b057e6e6bbcb5737c94a7372177e456dbf7579502f1"
+    },
+    {
+      "repo": "Comfy-Org/Krea-2",
+      "revision": "eb1eddd3983a54678545a9b2c178c5853b30f7be",
+      "file": "text_encoders/qwen3vl_4b_fp8_scaled.safetensors",
+      "target": "text_encoders/qwen3vl_4b_fp8_scaled.safetensors",
+      "bytes": 5242467968,
+      "sha256": "54bd5144df0bbc25dd6ccadfcb826b521445a1b06ae5a42570bdd2974ca87094"
+    },
+    {
+      "repo": "Comfy-Org/Krea-2",
+      "revision": "eb1eddd3983a54678545a9b2c178c5853b30f7be",
+      "file": "vae/qwen_image_vae.safetensors",
+      "target": "vae/qwen_image_vae.safetensors",
+      "bytes": 253806246,
+      "sha256": "a70580f0213e67967ee9c95f05bb400e8fb08307e017a924bf3441223e023d1f"
+    },
+    {
+      "repo": "Comfy-Org/Ideogram-4",
+      "revision": "2aa6c75ce6d5fabded0ca4d0f76abbfaf8edc87d",
+      "file": "diffusion_models/ideogram4_fp8_scaled.safetensors",
+      "target": "diffusion_models/ideogram4_fp8_scaled.safetensors",
+      "bytes": 9280741285,
+      "sha256": "49a946f1b0f8bcf5eab7d3b1ecc7b453c104e034cb1b592032745692724bd306"
+    },
+    {
+      "repo": "Comfy-Org/Ideogram-4",
+      "revision": "2aa6c75ce6d5fabded0ca4d0f76abbfaf8edc87d",
+      "file": "diffusion_models/ideogram4_unconditional_fp8_scaled.safetensors",
+      "target": "diffusion_models/ideogram4_unconditional_fp8_scaled.safetensors",
+      "bytes": 9280741293,
+      "sha256": "9b359007dae162cca7591d00868feea733eb7c56e56e3a214a4d5a9a2a07cd60"
+    },
+    {
+      "repo": "Comfy-Org/Qwen3-VL",
+      "revision": "02f0d3eefb59528799653d16735818801177ef1f",
+      "file": "text_encoders/qwen3vl_8b_fp8_scaled.safetensors",
+      "target": "text_encoders/qwen3vl_8b_fp8_scaled.safetensors",
+      "bytes": 10588637512,
+      "sha256": "4ba424cf62e51392e4d1a39933e803706f4e823c1065f36aaf149c6453f66bcd"
+    },
+    {
+      "repo": "Comfy-Org/flux2-dev",
+      "revision": "ed33133cd56476eac818c0943b6f9419b3e4a3a1",
+      "file": "split_files/vae/flux2-vae.safetensors",
+      "target": "split_files/vae/flux2-vae.safetensors",
+      "bytes": 336213556,
+      "sha256": "d64f3a68e1cc4f9f4e29b6e0da38a0204fe9a49f2d4053f0ec1fa1ca02f9c4b5"
+    }
+  ],
+  "music": [
+    {
+      "repo": "m-a-p/YuE2-3B",
+      "revision": "8f24312f187763b9854adeec87e437e2b03bbff1",
+      "file": "LICENSE",
+      "target": "YuE2-3B/LICENSE",
+      "bytes": 20309,
+      "sha256": "060985741d20e70613b4c189c7de106cabd3fb2109fbbfb6d705c9d619417dd0"
+    },
+    {
+      "repo": "m-a-p/YuE2-3B",
+      "revision": "8f24312f187763b9854adeec87e437e2b03bbff1",
+      "file": "THIRD_PARTY_NOTICES.md",
+      "target": "YuE2-3B/THIRD_PARTY_NOTICES.md",
+      "bytes": 793,
+      "sha256": "14d3fd9f6fee86b4260b69b0979735b99ffec8c6b4db254567047a4215cd9af3"
+    },
+    {
+      "repo": "m-a-p/YuE2-3B",
+      "revision": "8f24312f187763b9854adeec87e437e2b03bbff1",
+      "file": "config.json",
+      "target": "YuE2-3B/config.json",
+      "bytes": 959,
+      "sha256": "ad3477bbef890bf98ae196c1e4b44779494a6231c4ab66f32708eabadf265329"
+    },
+    {
+      "repo": "m-a-p/YuE2-3B",
+      "revision": "8f24312f187763b9854adeec87e437e2b03bbff1",
+      "file": "generation_config.json",
+      "target": "YuE2-3B/generation_config.json",
+      "bytes": 204,
+      "sha256": "ccc842772f029049fadf9b288393bcdd9f79271b361c0f1875ec1218e4ba5170"
+    },
+    {
+      "repo": "m-a-p/YuE2-3B",
+      "revision": "8f24312f187763b9854adeec87e437e2b03bbff1",
+      "file": "licenses/SnakeBeta-NVIDIA-MIT.txt",
+      "target": "YuE2-3B/licenses/SnakeBeta-NVIDIA-MIT.txt",
+      "bytes": 1076,
+      "sha256": "da9858d516047d82096d01c112a61bd67f26d289039464d668a1d45f91738ecc"
+    },
+    {
+      "repo": "m-a-p/YuE2-3B",
+      "revision": "8f24312f187763b9854adeec87e437e2b03bbff1",
+      "file": "licenses/stable-audio-tools-MIT.txt",
+      "target": "YuE2-3B/licenses/stable-audio-tools-MIT.txt",
+      "bytes": 1069,
+      "sha256": "a1fac33b7bcd791b74fb33aeb439f825e7277e239fc119fb7d2ab6f084a0c101"
+    },
+    {
+      "repo": "m-a-p/YuE2-3B",
+      "revision": "8f24312f187763b9854adeec87e437e2b03bbff1",
+      "file": "model.safetensors",
+      "target": "YuE2-3B/model.safetensors",
+      "bytes": 7261441640,
+      "sha256": "1d55c42c1a9875c34f5d736e15078449992b044e807ce2a138e6cf289a1e59e9"
+    },
+    {
+      "repo": "m-a-p/YuE2-3B",
+      "revision": "8f24312f187763b9854adeec87e437e2b03bbff1",
+      "file": "modeling_yue2.py",
+      "target": "YuE2-3B/modeling_yue2.py",
+      "bytes": 32983,
+      "sha256": "62d2bd758c8fff1a0d64584a699343076fca9a7880db5d8e19263bc30ae79d7c"
+    },
+    {
+      "repo": "m-a-p/YuE2-3B",
+      "revision": "8f24312f187763b9854adeec87e437e2b03bbff1",
+      "file": "qwen.tiktoken",
+      "target": "YuE2-3B/qwen.tiktoken",
+      "bytes": 2561218,
+      "sha256": "b2b1b8dfb5cc5f024bafc373121c6aba3f66f9a5a0269e243470a1de16a33186"
+    },
+    {
+      "repo": "m-a-p/YuE2-3B",
+      "revision": "8f24312f187763b9854adeec87e437e2b03bbff1",
+      "file": "weights_manifest.json",
+      "target": "YuE2-3B/weights_manifest.json",
+      "bytes": 179,
+      "sha256": "2296f82c29dcb11aeefde07e216403a32fc86c8f6da2ec15a70102abfd936a93"
+    },
+    {
+      "repo": "m-a-p/YuE2-3B",
+      "revision": "8f24312f187763b9854adeec87e437e2b03bbff1",
+      "file": "yue2_generation_config.json",
+      "target": "YuE2-3B/yue2_generation_config.json",
+      "bytes": 466,
+      "sha256": "203830cebde6e3644eb291925362990d198e66c3b6006cd11f1aaa21904bcc61"
+    },
+    {
+      "repo": "m-a-p/YuE2-Vae",
+      "revision": "152733a19ad43aa67e367f9b5503ef8075bb5126",
+      "file": "LICENSE",
+      "target": "YuE2-Vae/LICENSE",
+      "bytes": 20309,
+      "sha256": "060985741d20e70613b4c189c7de106cabd3fb2109fbbfb6d705c9d619417dd0"
+    },
+    {
+      "repo": "m-a-p/YuE2-Vae",
+      "revision": "152733a19ad43aa67e367f9b5503ef8075bb5126",
+      "file": "THIRD_PARTY_NOTICES.md",
+      "target": "YuE2-Vae/THIRD_PARTY_NOTICES.md",
+      "bytes": 793,
+      "sha256": "14d3fd9f6fee86b4260b69b0979735b99ffec8c6b4db254567047a4215cd9af3"
+    },
+    {
+      "repo": "m-a-p/YuE2-Vae",
+      "revision": "152733a19ad43aa67e367f9b5503ef8075bb5126",
+      "file": "config.json",
+      "target": "YuE2-Vae/config.json",
+      "bytes": 1378,
+      "sha256": "f0191bb9694009956de44e0c361a6f1334760be4c8f848e599bde242a54a0970"
+    },
+    {
+      "repo": "m-a-p/YuE2-Vae",
+      "revision": "152733a19ad43aa67e367f9b5503ef8075bb5126",
+      "file": "licenses/SnakeBeta-NVIDIA-MIT.txt",
+      "target": "YuE2-Vae/licenses/SnakeBeta-NVIDIA-MIT.txt",
+      "bytes": 1076,
+      "sha256": "da9858d516047d82096d01c112a61bd67f26d289039464d668a1d45f91738ecc"
+    },
+    {
+      "repo": "m-a-p/YuE2-Vae",
+      "revision": "152733a19ad43aa67e367f9b5503ef8075bb5126",
+      "file": "licenses/stable-audio-tools-MIT.txt",
+      "target": "YuE2-Vae/licenses/stable-audio-tools-MIT.txt",
+      "bytes": 1069,
+      "sha256": "a1fac33b7bcd791b74fb33aeb439f825e7277e239fc119fb7d2ab6f084a0c101"
+    },
+    {
+      "repo": "m-a-p/YuE2-Vae",
+      "revision": "152733a19ad43aa67e367f9b5503ef8075bb5126",
+      "file": "model.safetensors",
+      "target": "YuE2-Vae/model.safetensors",
+      "bytes": 530512720,
+      "sha256": "807ce9d5149fa27c5ad3e6582058469852e908f6c5acc8c8aa338e7ab7751346"
+    },
+    {
+      "repo": "m-a-p/YuE2-Vae",
+      "revision": "152733a19ad43aa67e367f9b5503ef8075bb5126",
+      "file": "modeling_vae.py",
+      "target": "YuE2-Vae/modeling_vae.py",
+      "bytes": 25265,
+      "sha256": "b6578ff461e6be9fd079ca5ddf12893940f3b3338ff3435fceae89c466486f5a"
+    },
+    {
+      "repo": "m-a-p/YuE2-Vae",
+      "revision": "152733a19ad43aa67e367f9b5503ef8075bb5126",
+      "file": "weights_manifest.json",
+      "target": "YuE2-Vae/weights_manifest.json",
+      "bytes": 178,
+      "sha256": "017d64a4d288217a43fcac3866a0e1d55f796fa891d4dfb6de0bd170ab750026"
+    }
+  ]
+}

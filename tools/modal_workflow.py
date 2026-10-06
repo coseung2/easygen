@@ -13,8 +13,9 @@ from pathlib import Path, PurePosixPath
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from worker.h3_graph import build_graph, collect_outputs
+from easygen_runtime.config import resource
 
-APPS = {"video": "easygen-h3-v1", "image": "easygen-image-v1", "music": "yue2-music"}
+APPS = {"video": resource("h3"), "image": resource("image"), "music": resource("music")}
 H3_ATTESTATION = "minimax-h3-use-authorized-by-minimax"
 
 
@@ -99,6 +100,7 @@ def prepare(kind, request_path, folder):
     revision = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True, text=True)
     write(folder / "state.json", {"kind": kind, "app": APPS[kind], "job_id": job,
                                  "status": "prepared", "files": files,
+                                 "data_volume": resource("h3-data") if kind == "video" else resource("music-outputs"),
                                  "git_commit": revision.stdout.strip() or None})
 
 
@@ -118,7 +120,7 @@ def submit(folder, modal):
         for item in state["files"]:
             if hashlib.sha256(Path(item["local"]).read_bytes()).hexdigest() != item["sha256"]:
                 raise ValueError("An input changed after prepare; prepare a new run before submission")
-        volume = modal.Volume.from_name("minimax-h3-comfyui-data")
+        volume = modal.Volume.from_name(state["data_volume"])
         with volume.batch_upload() as batch:
             for item in state["files"]:
                 batch.put_file(item["local"], "input/" + item["remote"])
@@ -171,7 +173,7 @@ def download(folder, modal):
     else:
         is_video = state["kind"] == "video"
         paths = collect_outputs(result["outputs"]) if is_video else {"audio": result["audio"]}
-        volume = modal.Volume.from_name("minimax-h3-comfyui-data" if is_video else "yue2-outputs")
+        volume = modal.Volume.from_name(state["data_volume"])
         for label, relative in paths.items():
             remote = PurePosixPath(relative)
             if remote.is_absolute() or ".." in remote.parts or "\\" in relative:

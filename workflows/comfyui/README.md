@@ -16,4 +16,4 @@
 python tools/check_workflow_snapshots.py
 ```
 
-이 검사는 경로·크기·해시·JSON 구조만 확인하며 GPU를 실행하지 않습니다. 모델 준비와 기반 이미지 접근 조건은 직접 실행 안내에 있습니다. YuE2는 ComfyUI JSON이 아니라 [Python 파이프라인](../../modal/yue2_music.py)입니다.
+이 검사는 경로·크기·해시·JSON 구조만 확인하며 GPU를 실행하지 않습니다. 자신의 계정에서 공개 이미지를 빌드하고 모델을 준비하는 방법은 직접 실행 안내에 있습니다. YuE2는 ComfyUI JSON이 아니라 [독립 Python 파이프라인](../../modal/workflow_music.py)입니다.

@@ -1,0 +1,32 @@
+[
+  {
+    "repo": "Comfy-Org/ComfyUI",
+    "commit": "73c9bad4d21e7addbe1d13bc92eee0f1431b017d",
+    "target": "/root/ComfyUI"
+  },
+  {
+    "repo": "Kosinkadink/ComfyUI-VideoHelperSuite",
+    "commit": "4d907bee61e92c2e65af3bd6383a4e4d356126d1",
+    "target": "/root/ComfyUI/custom_nodes/ComfyUI-VideoHelperSuite"
+  },
+  {
+    "repo": "LBH-123-AI/Comfyui_Minimax_h3_latent_Upscaler",
+    "commit": "40316cf008b2fd8663263270669eb4da23f89d2c",
+    "target": "/root/ComfyUI/custom_nodes/Comfyui_Minimax_h3_latent_Upscaler"
+  },
+  {
+    "repo": "Zironic/H3-Optimizations",
+    "commit": "862774944a331bc1a66cee1cf805b94bd138ebbe",
+    "target": "/root/ComfyUI/custom_nodes/H3-Optimizations"
+  },
+  {
+    "repo": "Deno2026/comfyui-deno-custom-nodes",
+    "commit": "5dc0a624b41a68b98f39d3abb321322ee7f78274",
+    "target": "/root/ComfyUI/custom_nodes/comfyui-deno-custom-nodes"
+  },
+  {
+    "repo": "kijai/ComfyUI-KJNodes",
+    "commit": "d3cfe21625e5170126ce06fbfcfe1d88108688c3",
+    "target": "/root/ComfyUI/custom_nodes/ComfyUI-KJNodes"
+  }
+]
